@@ -54,8 +54,6 @@ def populationControl():
     )
     return reproduction_rate
 
-# ... (previous populationControl functions remain here)
-
 def collectInformationWaste():
     """Placeholder: Collects information waste from the system.
     Returns:

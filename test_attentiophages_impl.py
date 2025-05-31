@@ -18,7 +18,6 @@ class TestAttentiophagesImpl(unittest.TestCase):
 
         # Assertions
         self.assertEqual(rate, 0.25)
-        # Verify calculateSystemCapacity was called with the dummy values used in populationControl
         mock_calculateSystemCapacity.assert_called_once_with(100, 200, 700)
         mock_measureSystemLoad.assert_called_once()
         mock_adjustReproductionRate.assert_called_once_with(1000, 500)
@@ -42,8 +41,8 @@ class TestAttentiophagesImpl(unittest.TestCase):
         mock_recycleToSystem.assert_called_once_with(["processed1", "processed2"])
 
     @patch('attentiophages_impl.collectInformationWaste')
-    @patch('attentiophages_impl.decompose') # Added patch for decompose
-    @patch('attentiophages_impl.recycleToSystem') # Added patch for recycleToSystem
+    @patch('attentiophages_impl.decompose')
+    @patch('attentiophages_impl.recycleToSystem')
     def test_resourceCycle_no_waste(self, mock_recycleToSystem, mock_decompose, mock_collectInformationWaste):
         # Configure mock for no waste
         mock_collectInformationWaste.return_value = []
@@ -52,16 +51,15 @@ class TestAttentiophagesImpl(unittest.TestCase):
         status = attentiophages_impl.resourceCycle()
 
         # Assertions
-        self.assertTrue(status) # Assuming True is returned for no waste scenario
+        self.assertTrue(status)
         mock_collectInformationWaste.assert_called_once()
-        # Ensure other helpers not called
         mock_decompose.assert_not_called()
         mock_recycleToSystem.assert_not_called()
 
 
     @patch('attentiophages_impl.collectInformationWaste')
     @patch('attentiophages_impl.decompose')
-    @patch('attentiophages_impl.recycleToSystem') # Added patch for recycleToSystem
+    @patch('attentiophages_impl.recycleToSystem')
     def test_resourceCycle_decomposition_fails(self, mock_recycleToSystem, mock_decompose, mock_collectInformationWaste):
         # Configure mocks
         mock_collectInformationWaste.return_value = ["waste1"]
@@ -74,7 +72,6 @@ class TestAttentiophagesImpl(unittest.TestCase):
         self.assertFalse(status)
         mock_collectInformationWaste.assert_called_once()
         mock_decompose.assert_called_once_with(["waste1"])
-        # Ensure recycleToSystem is not called.
         mock_recycleToSystem.assert_not_called()
 
     def test_calculateSystemCapacity_logic(self):
