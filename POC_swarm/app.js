@@ -1,29 +1,16 @@
 // app.js - P2P Number Swarm Logic
 
-// -----------------------------------------------------------------------------
-// Firebase Configuration (USER ACTION REQUIRED)
-// -----------------------------------------------------------------------------
-// TODO: Replace with your actual Firebase project configuration
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DATABASE_URL", // Make sure this is the Realtime Database URL
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-console.log("Firebase Initialized (ensure you have replaced placeholder config).");
+// Assume IrcFramework is available globally (e.g. via a <script> tag for a browser bundle)
+// For actual deployment, irc-framework would need to be properly included and bundled.
+// const IrcFramework = require('irc-framework'); // Example if in Node.js or using a bundler
+// Note: Firebase SDK script tags removed from index.html
+// Note: Firebase configuration and initialization have been removed.
 
 // -----------------------------------------------------------------------------
 // DOM Element References
 // -----------------------------------------------------------------------------
 const localPeerIdDisplay = document.getElementById('local-peer-id');
-const peerListUl = document.getElementById('peer-list'); // Corrected from peerList
+const peerListUl = document.getElementById('peer-list');
 const localNumberDisplay = document.getElementById('local-number-display');
 const generateNumberBtn = document.getElementById('generate-number-btn');
 const swarmMaxDisplay = document.getElementById('swarm-max-display');
@@ -37,9 +24,29 @@ const dataChannels = {};    // Stores RTCDataChannel objects, keyed by remotePee
 let localNumber = null;
 let swarmMaximum = null;
 const connectedPeersNumbers = new Map(); // Stores numbers received from peers {peerId: number}
+const ircPeers = new Map(); // Stores { nick: { peerId: '...', lastHello: timestamp } }
+let peerTimeoutInterval = null;
+let periodicHelloInterval = null;
+
 
 // WebRTC Configuration
 const STUN_SERVER = { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] };
+
+// IRC Configuration using irc-framework style
+const ircOptions = {
+    host: "irc.libera.chat",
+    port: 6697,
+    ssl: true,
+    nick: "peer_placeholder",
+    username: "p2pswarm",
+    gecos: "P2P Swarm Node",
+    auto_reconnect: true,
+    auto_reconnect_wait: 4000,
+    auto_reconnect_max_retries: 3,
+    mainChannel: null, // Will be set in initializeApp
+    localPeerIdForNick: null
+};
+let ircClient = null;
 
 // -----------------------------------------------------------------------------
 // Utility Functions
@@ -79,9 +86,23 @@ function createPeerConnection(remotePeerId, isInitiator) {
 
     pc.onicecandidate = (event) => {
         if (event.candidate) {
-            console.log(`Sending ICE candidate to ${remotePeerId}`);
-            database.ref(`signaling/${remotePeerId}/iceCandidates/${localPeerId}`).push(event.candidate)
-                .catch(err => console.error("Error sending ICE candidate: ", err));
+            let remoteNick = null;
+            for (const [nick, data] of ircPeers.entries()) {
+                if (data.peerId === remotePeerId) {
+                    remoteNick = nick;
+                    break;
+                }
+            }
+
+            if (remoteNick && ircClient && ircClient.connected) {
+                console.log(`Sending ICE candidate to ${remoteNick} (PeerID: ${remotePeerId})`);
+                const candidateSignal = { type: "candidate", senderPeerId: localPeerId, data: event.candidate };
+                ircClient.say(remoteNick, `WEBRTC_SIGNAL:${JSON.stringify(candidateSignal)}`);
+            } else if (!remoteNick) {
+                console.warn(`Cannot send ICE candidate: unknown IRC nick for peerId ${remotePeerId}.`);
+            } else {
+                console.warn(`Cannot send ICE candidate: IRC client not connected.`);
+            }
         }
     };
 
@@ -91,7 +112,7 @@ function createPeerConnection(remotePeerId, isInitiator) {
             handleDisconnect(remotePeerId);
         } else if (pc.connectionState === 'connected') {
             addPeerToUI(remotePeerId);
-            if (localNumber !== null) { // Send our number if we already have one
+            if (localNumber !== null) {
                 sendNumberToPeer(remotePeerId, localNumber);
             }
         }
@@ -116,8 +137,7 @@ function createPeerConnection(remotePeerId, isInitiator) {
 function setupDataChannel(channel, remotePeerId) {
     channel.onopen = () => {
         console.log(`Data channel with ${remotePeerId} opened.`);
-        addPeerToUI(remotePeerId); // Ensure peer is in UI once channel is open
-        // When channel opens, send current number if available
+        addPeerToUI(remotePeerId);
         if (localNumber !== null) {
             sendNumberToPeer(remotePeerId, localNumber);
         }
@@ -125,7 +145,6 @@ function setupDataChannel(channel, remotePeerId) {
 
     channel.onclose = () => {
         console.log(`Data channel with ${remotePeerId} closed.`);
-        // handleDisconnect(remotePeerId); // Handled by onconnectionstatechange
     };
 
     channel.onmessage = (event) => {
@@ -159,164 +178,296 @@ function handleDisconnect(remotePeerId) {
     }
     removePeerFromUI(remotePeerId);
     connectedPeersNumbers.delete(remotePeerId);
-    calculateAndDisplaySwarmMaximum(); // Recalculate max without the disconnected peer
-
-    // Clean up Firebase entries related to this disconnected peer (optional, depends on desired cleanup strategy)
-    // database.ref(`signaling/${localPeerId}/offers/${remotePeerId}`).remove();
-    // database.ref(`signaling/${localPeerId}/answers/${remotePeerId}`).remove();
-    // database.ref(`signaling/${localPeerId}/iceCandidates/${remotePeerId}`).remove();
-    // database.ref(`signaling/${remotePeerId}/offers/${localPeerId}`).remove();
-    // database.ref(`signaling/${remotePeerId}/answers/${localPeerId}`).remove();
-    // database.ref(`signaling/${remotePeerId}/iceCandidates/${localPeerId}`).remove();
-
+    calculateAndDisplaySwarmMaximum();
     console.log(`Cleaned up resources for ${remotePeerId}.`);
 }
 
-
 // -----------------------------------------------------------------------------
-// Signaling Logic (Firebase)
+// IRC Client Functions (using irc-framework)
 // -----------------------------------------------------------------------------
-function listenToPeers() {
-    const peersRef = database.ref('peers');
-    peersRef.on('child_added', (snapshot) => {
-        const remotePeerId = snapshot.key;
-        if (remotePeerId === localPeerId) return;
+function initializeIRCClient() {
+    if (!ircOptions.localPeerIdForNick) {
+        console.error("Cannot connect to IRC: localPeerIdForNick not set in ircOptions.");
+        return;
+    }
+    if (typeof IrcFramework === 'undefined') {
+        console.error("IrcFramework is not available. Ensure it's included in the page.");
+        const errorDiv = document.createElement('div');
+        errorDiv.textContent = "ERROR: IRC Framework library not loaded. Peer discovery via IRC will not work.";
+        errorDiv.style.color = "red";
+        errorDiv.style.padding = "10px";
+        errorDiv.style.backgroundColor = "#fee";
+        document.body.insertBefore(errorDiv, document.body.firstChild);
+        return;
+    }
 
-        console.log(`Discovered peer: ${remotePeerId}`);
-        // Initiate connection if our ID is lexicographically smaller
-        if (localPeerId < remotePeerId && !peerConnections[remotePeerId]) {
-            console.log(`Initiating connection to ${remotePeerId} (our ID is smaller).`);
-            initiateConnectionToPeer(remotePeerId);
+    ircOptions.nick = ircOptions.localPeerIdForNick;
+    console.log(`Initializing IRC client with nick: ${ircOptions.nick} to ${ircOptions.host}:${ircOptions.port}`);
+
+    ircClient = new IrcFramework.Client(ircOptions);
+    ircClient.connect();
+
+    ircClient.on('connected', () => {
+        console.log('IRC client connected to server.');
+    });
+
+    ircClient.on('registered', () => {
+        console.log("IRC client registered with the server.");
+        if (ircOptions.mainChannel) {
+            console.log(`Joining main channel: ${ircOptions.mainChannel}`);
+            ircClient.join(ircOptions.mainChannel);
         } else {
-            console.log(`Will not initiate to ${remotePeerId} (their ID is smaller or connection exists/pending).`);
+            console.warn("Main channel not set in ircOptions, cannot join.");
         }
     });
 
-    peersRef.on('child_removed', (snapshot) => {
-        const remotePeerId = snapshot.key;
-        if (remotePeerId === localPeerId) return;
-        console.log(`Peer ${remotePeerId} left.`);
-        handleDisconnect(remotePeerId);
+    ircClient.on('close', () => {
+        console.log('IRC client connection closed.');
+        if (periodicHelloInterval) clearInterval(periodicHelloInterval);
     });
 
-    // Announce our presence
-    const localPeerPresenceRef = database.ref(`peers/${localPeerId}`);
-    localPeerPresenceRef.set(true).catch(err => console.error("Error announcing presence: ", err));
-    localPeerPresenceRef.onDisconnect().remove(); // Remove peer from list if client disconnects abruptly
+    ircClient.on('error', (err) => {
+        console.error('IRC client error:', err);
+        if (err && err.event && err.event.type === 'error' && err.event.target && err.event.target.readyState === WebSocket.CLOSED) {
+            console.error("IRC WebSocket connection failed. Check server address, port, and if a WebSocket proxy is needed (e.g. /websocket path).");
+        }
+    });
+
+    ircClient.on('raw', (event) => {
+        if (!event.line.includes("PING") && !event.line.includes("PONG")) {
+            console.log("IRC RAW:", event.line);
+        }
+    });
+
+    ircClient.on('join', (event) => {
+        if (!ircClient || !ircClient.user) return; // Guard, ensure ircClient.user is populated
+        if (ircClient.user && event.nick.toLowerCase() === ircClient.user.nick.toLowerCase()) {
+            console.log(`Successfully joined channel: ${event.channel}`);
+            const helloMsg = `HELLO ${localPeerId}`;
+            if (ircClient.connected) {
+                ircClient.say(ircOptions.mainChannel, helloMsg);
+                console.log(`Sent HELLO to ${ircOptions.mainChannel}: ${helloMsg}`);
+            }
+            if (periodicHelloInterval) clearInterval(periodicHelloInterval);
+            periodicHelloInterval = setInterval(() => {
+                if (ircClient && ircClient.connected) {
+                    const periodicHelloMsg = `HELLO ${localPeerId}`;
+                    ircClient.say(ircOptions.mainChannel, periodicHelloMsg);
+                    console.log(`Sent periodic HELLO to ${ircOptions.mainChannel}: ${periodicHelloMsg}`);
+                } else {
+                    if(periodicHelloInterval) clearInterval(periodicHelloInterval);
+                }
+            }, 3 * 60 * 1000);
+        } else {
+            console.log(`${event.nick} joined ${event.channel}. Waiting for their HELLO.`);
+        }
+    });
+
+    ircClient.on('part', (event) => {
+        console.log(`${event.nick} left ${event.channel} (${event.message})`);
+        if (ircPeers.has(event.nick)) {
+            const departingPeerId = ircPeers.get(event.nick).peerId;
+            console.log(`Peer ${event.nick} (${departingPeerId}) left. Removing.`);
+            ircPeers.delete(event.nick);
+            removePeerFromUI(departingPeerId);
+            if (peerConnections[departingPeerId]) {
+                handleDisconnect(departingPeerId);
+            }
+        }
+    });
+
+    ircClient.on('quit', (event) => {
+        console.log(`${event.nick} quit IRC (${event.message})`);
+        if (ircPeers.has(event.nick)) {
+            const departingPeerId = ircPeers.get(event.nick).peerId;
+            console.log(`Peer ${event.nick} (${departingPeerId}) quit. Removing.`);
+            ircPeers.delete(event.nick);
+            removePeerFromUI(departingPeerId);
+            if (peerConnections[departingPeerId]) {
+                handleDisconnect(departingPeerId);
+            }
+        }
+    });
+
+    ircClient.on('privmsg', (event) => {
+        if (!ircClient || !ircClient.user) return;
+        const senderNick = event.nick;
+        const target = event.target;
+        const message = event.message;
+
+        console.log(`IRC PRIVMSG from ${senderNick} to ${target}: ${message}`);
+
+        if (target.toLowerCase() === ircOptions.mainChannel.toLowerCase()) {
+            if (message.startsWith("HELLO ")) {
+                const receivedPeerId = message.substring(6).trim();
+                if (receivedPeerId === localPeerId) return;
+
+                console.log(`Received HELLO from ${senderNick} with peerId ${receivedPeerId}`);
+                if (!ircPeers.has(senderNick) || ircPeers.get(senderNick).peerId !== receivedPeerId) {
+                    ircPeers.set(senderNick, { peerId: receivedPeerId, lastHello: Date.now() });
+                    console.log(`Added/Updated peer: ${senderNick} -> ${receivedPeerId}`);
+                    if (localPeerId < receivedPeerId && (!peerConnections[receivedPeerId] ||
+                        (peerConnections[receivedPeerId].connectionState !== 'connected' &&
+                         peerConnections[receivedPeerId].connectionState !== 'connecting'))) {
+                        console.log(`Discovered new peer ${receivedPeerId} (${senderNick}) via HELLO, initiating connection.`);
+                        initiateConnectionToPeer(receivedPeerId, senderNick);
+                    }
+                } else {
+                    ircPeers.get(senderNick).lastHello = Date.now();
+                }
+            }
+        } else if (ircClient.user && target.toLowerCase() === ircClient.user.nick.toLowerCase()) { // Check PM to self
+            if (message.startsWith("WEBRTC_SIGNAL:")) {
+                try {
+                    const signalData = JSON.parse(message.substring(16));
+                    const remotePeerId = signalData.senderPeerId;
+
+                    if (!ircPeers.has(senderNick) || ircPeers.get(senderNick).peerId !== remotePeerId) {
+                        console.warn(`Received WEBRTC_SIGNAL from ${senderNick} claiming to be ${remotePeerId}, but this doesn't match our records or peer not known via HELLO. Ignoring. Peer data from ircPeers:`, ircPeers.get(senderNick));
+                        return;
+                    }
+
+                    switch (signalData.type) {
+                        case "offer":
+                            handleOffer(remotePeerId, senderNick, signalData.data);
+                            break;
+                        case "answer":
+                            handleAnswer(remotePeerId, signalData.data);
+                            break;
+                        case "candidate":
+                            handleCandidate(remotePeerId, signalData.data);
+                            break;
+                        default:
+                            console.warn("Unknown WEBRTC_SIGNAL type:", signalData.type);
+                    }
+                } catch (e) {
+                    console.error("Error parsing WEBRTC_SIGNAL JSON:", e, "Raw message:", message.substring(16));
+                }
+            }
+        }
+    });
+
+    ircClient.on('nick in use', (event) => {
+        console.warn(`IRC Nick ${event.nick} already in use. Trying ${event.nick + '_'}`);
+        ircClient.nick(event.nick + '_');
+    });
+
+    ircClient.on('nick', (event) => {
+        if (!ircClient || !ircClient.user) return;
+        if (event.nick.toLowerCase() === ircClient.user.nick.toLowerCase() && event.new_nick.toLowerCase() !== ircClient.user.nick.toLowerCase()) {
+             console.log(`Our nick changed from ${event.nick} to ${event.new_nick}.`);
+        }
+        if (ircPeers.has(event.nick) && event.nick.toLowerCase() !== ircClient.user.nick.toLowerCase()) {
+            const peerData = ircPeers.get(event.nick);
+            ircPeers.delete(event.nick);
+            ircPeers.set(event.new_nick, peerData);
+            console.log(`Peer ${event.nick} changed nick to ${event.new_nick}. Updated ircPeers entry.`);
+        }
+    });
 }
 
-function initiateConnectionToPeer(remotePeerId) {
-    if (peerConnections[remotePeerId] && peerConnections[remotePeerId].connectionState === 'connected') {
-        console.log(`Already connected to ${remotePeerId}. Skipping initiation.`);
+// -----------------------------------------------------------------------------
+// WebRTC Signaling Handlers (IRC based)
+// -----------------------------------------------------------------------------
+function handleOffer(remotePeerId, remoteNick, offerData) {
+    console.log(`Received offer from ${remoteNick} (PeerID: ${remotePeerId})`);
+    let pc = peerConnections[remotePeerId];
+    if (pc && (pc.connectionState === 'connected' || pc.connectionState === 'connecting')) {
+        console.log(`Connection to ${remotePeerId} already exists or is connecting. Current state: ${pc.connectionState}. Ignoring new offer for now.`);
         return;
     }
+    pc = createPeerConnection(remotePeerId, false); // false: not initiator
+    pc.setRemoteDescription(new RTCSessionDescription(offerData))
+        .then(() => {
+            console.log(`Set remote description for offer from ${remotePeerId}`);
+            return pc.createAnswer();
+        })
+        .then(answer => {
+            console.log(`Created answer for ${remotePeerId}`);
+            return pc.setLocalDescription(answer);
+        })
+        .then(() => {
+            if (!ircClient || !ircClient.connected) {
+                console.error("IRC client not connected, cannot send answer.");
+                return;
+            }
+            const answerSignal = { type: "answer", senderPeerId: localPeerId, data: pc.localDescription };
+            ircClient.say(remoteNick, `WEBRTC_SIGNAL:${JSON.stringify(answerSignal)}`);
+            console.log(`Sent answer to ${remoteNick} (PeerID: ${remotePeerId})`);
+        })
+        .catch(error => {
+            console.error(`Error processing offer from ${remotePeerId}:`, error);
+            handleDisconnect(remotePeerId);
+        });
+}
+
+function handleAnswer(remotePeerId, answerData) {
+    console.log(`Received answer from PeerID: ${remotePeerId}`);
+    const pc = peerConnections[remotePeerId];
+    if (!pc) {
+        console.error(`No peer connection for ${remotePeerId} to handle answer.`);
+        return;
+    }
+    pc.setRemoteDescription(new RTCSessionDescription(answerData))
+        .then(() => {
+            console.log(`Set remote description for answer from ${remotePeerId}`);
+        })
+        .catch(error => console.error(`Error processing answer from ${remotePeerId}:`, error));
+}
+
+function handleCandidate(remotePeerId, candidateData) {
+    console.log(`Received ICE candidate from PeerID: ${remotePeerId}`);
+    const pc = peerConnections[remotePeerId];
+    if (!pc) {
+        console.error(`No peer connection for ${remotePeerId} to handle candidate.`);
+        return;
+    }
+    if (!candidateData) {
+        console.log(`Received null/empty ICE candidate from ${remotePeerId}, potentially end of candidates.`);
+        return;
+    }
+    pc.addIceCandidate(new RTCIceCandidate(candidateData))
+        .then(() => {
+            console.log(`Added ICE candidate from ${remotePeerId}`);
+        })
+        .catch(error => console.error(`Error adding ICE candidate for ${remotePeerId}:`, error.toString(), "Candidate:", candidateData));
+}
+
+// -----------------------------------------------------------------------------
+// Signaling Logic (IRC based - main initiator function)
+// -----------------------------------------------------------------------------
+function initiateConnectionToPeer(remotePeerId, remoteNick) {
+    if (!ircClient || !ircClient.connected) {
+        console.error("IRC client not connected. Cannot initiate connection to", remoteNick);
+        return;
+    }
+    if (peerConnections[remotePeerId] &&
+        (peerConnections[remotePeerId].connectionState === 'connected' ||
+         peerConnections[remotePeerId].connectionState === 'connecting')) {
+        console.log(`Already connected or connecting to ${remotePeerId} (${remoteNick}). Skipping initiation.`);
+        return;
+    }
+    console.log(`Initiating WebRTC connection to ${remoteNick} (PeerID: ${remotePeerId})`);
     const pc = createPeerConnection(remotePeerId, true); // true for initiator
+
     pc.createOffer()
         .then(offer => {
             console.log(`Created offer for ${remotePeerId}`);
             return pc.setLocalDescription(offer);
         })
         .then(() => {
-            console.log(`Sending offer to ${remotePeerId}`);
-            return database.ref(`signaling/${remotePeerId}/offers/${localPeerId}`).set(pc.localDescription);
-        })
-        .catch(error => console.error(`Error initiating connection to ${remotePeerId}:`, error));
-}
-
-function listenForOffers() {
-    const offersRef = database.ref(`signaling/${localPeerId}/offers`);
-    offersRef.on('child_added', (snapshot) => {
-        const senderPeerId = snapshot.key;
-        const offerData = snapshot.val();
-
-        if (senderPeerId === localPeerId) return; // Ignore self-sent offers (should not happen with this path)
-
-        // If we already have an established or connecting connection, and we are the initiator, ignore subsequent offers.
-        // This helps prevent race conditions or redundant connection setups.
-        if (peerConnections[senderPeerId] && localPeerId < senderPeerId) {
-             console.log(`Ignoring offer from ${senderPeerId} as we are already initiator or connected.`);
-             // Clean up the received offer to prevent re-processing if not needed
-             // snapshot.ref.remove(); // Be cautious with this, might be too aggressive
-             return;
-        }
-
-        console.log(`Received offer from ${senderPeerId}:`, offerData);
-
-        let pc = peerConnections[senderPeerId];
-        if (!pc || pc.connectionState !== 'connected') { // only create if not connected
-            pc = createPeerConnection(senderPeerId, false); // false for receiver
-        } else {
-             console.log(`Connection to ${senderPeerId} already exists and is connected. Ignoring offer.`);
-             return;
-        }
-
-        pc.setRemoteDescription(new RTCSessionDescription(offerData))
-            .then(() => {
-                console.log(`Set remote description for offer from ${senderPeerId}`);
-                return pc.createAnswer();
-            })
-            .then(answer => {
-                console.log(`Created answer for ${senderPeerId}`);
-                return pc.setLocalDescription(answer);
-            })
-            .then(() => {
-                console.log(`Sending answer to ${senderPeerId}`);
-                return database.ref(`signaling/${senderPeerId}/answers/${localPeerId}`).set(pc.localDescription);
-            })
-            .then(() => {
-                // Offer processed, remove it from Firebase to prevent re-processing on page reload by this peer
-                snapshot.ref.remove().catch(err => console.warn("Could not remove processed offer:", err));
-            })
-            .catch(error => {
-                console.error(`Error processing offer from ${senderPeerId}:`, error);
-                 // If an error occurs, clean up potentially inconsistent state
-                handleDisconnect(senderPeerId);
-            });
-    });
-}
-
-function listenForAnswers() {
-    const answersRef = database.ref(`signaling/${localPeerId}/answers`);
-    answersRef.on('child_added', (snapshot) => {
-        const responderPeerId = snapshot.key;
-        const answerData = snapshot.val();
-
-        if (!peerConnections[responderPeerId]) {
-            console.error(`Received answer from ${responderPeerId}, but no peer connection exists.`);
-            return;
-        }
-        console.log(`Received answer from ${responderPeerId}:`, answerData);
-
-        peerConnections[responderPeerId].setRemoteDescription(new RTCSessionDescription(answerData))
-            .then(() => {
-                console.log(`Set remote description for answer from ${responderPeerId}`);
-                // Answer processed, remove it from Firebase
-                snapshot.ref.remove().catch(err => console.warn("Could not remove processed answer:", err));
-            })
-            .catch(error => console.error(`Error processing answer from ${responderPeerId}:`, error));
-    });
-}
-
-function listenForIceCandidates() {
-    const iceCandidatesRef = database.ref(`signaling/${localPeerId}/iceCandidates`);
-    iceCandidatesRef.on('child_added', (parentSnapshot) => { // Iterates over senderPeerIds
-        const senderPeerId = parentSnapshot.key;
-        parentSnapshot.ref.on('child_added', (childSnapshot) => { // Iterates over candidates from a specific sender
-            const candidateData = childSnapshot.val();
-            if (!peerConnections[senderPeerId]) {
-                console.warn(`Received ICE candidate from ${senderPeerId}, but no peer connection. Might be late.`);
-                // Optionally buffer candidates if pc not yet created, then apply once it is.
-                return;
+            if (!ircClient || !ircClient.connected) {
+                 console.error("IRC client disconnected before offer could be sent to", remoteNick);
+                 throw new Error("IRC client not connected");
             }
-            console.log(`Received ICE candidate from ${senderPeerId}:`, candidateData);
-            peerConnections[senderPeerId].addIceCandidate(new RTCIceCandidate(candidateData))
-                .then(() => {
-                    // Candidate added, remove it from Firebase
-                    childSnapshot.ref.remove().catch(err => console.warn("Could not remove processed ICE candidate:", err));
-                })
-                .catch(error => console.error(`Error adding ICE candidate from ${senderPeerId}:`, error));
+            const offerSignal = { type: "offer", senderPeerId: localPeerId, data: pc.localDescription };
+            ircClient.say(remoteNick, `WEBRTC_SIGNAL:${JSON.stringify(offerSignal)}`);
+            console.log(`Sent offer to ${remoteNick} (PeerID: ${remotePeerId})`);
+        })
+        .catch(error => {
+            console.error(`Error initiating connection to ${remotePeerId} (${remoteNick}):`, error);
+            handleDisconnect(remotePeerId);
         });
-    });
 }
 
 // -----------------------------------------------------------------------------
@@ -349,23 +500,17 @@ function sendNumberToPeer(remotePeerId, number) {
     }
 }
 
-
 function calculateAndDisplaySwarmMaximum() {
     let max = localNumber !== null ? localNumber : -Infinity;
     connectedPeersNumbers.forEach((number, peerId) => {
         if (number > max) {
             max = number;
         }
-        // Ensure peer is still considered "active" (e.g., data channel open or pc connected)
-        if (!dataChannels[peerId] || dataChannels[peerId].readyState !== 'open') {
-            // console.warn(`Peer ${peerId} included in max calc but data channel not open.`);
-        }
     });
-    swarmMaximum = max === -Infinity ? null : max; // Store null if no numbers yet
+    swarmMaximum = max === -Infinity ? null : max;
     swarmMaxDisplay.textContent = swarmMaximum !== null ? swarmMaximum : "N/A";
     console.log(`Swarm maximum calculated: ${swarmMaximum}`);
 }
-
 
 // -----------------------------------------------------------------------------
 // Initialization
@@ -377,7 +522,17 @@ function initializeApp() {
     localPeerIdDisplay.textContent = localPeerId;
     console.log(`Local Peer ID: ${localPeerId}`);
 
-    // Initial UI state
+    let safeNick = localPeerId.replace(/[^a-zA-Z0-9_-\[\]\{\}\^`|]/g, '');
+    if (!safeNick) {
+        safeNick = "swarmpeer" + Math.floor(Math.random() * 1000);
+    }
+    if (safeNick.length > 16) {
+        safeNick = safeNick.substring(0, 16);
+    }
+    ircOptions.localPeerIdForNick = `peer_${safeNick}`;
+    ircOptions.mainChannel = "#poc-swarm-discovery";
+    console.log("Generated IRC Nick for framework:", ircOptions.localPeerIdForNick);
+
     localNumberDisplay.textContent = "Click 'Generate' to start";
     swarmMaxDisplay.textContent = "Waiting for numbers...";
 
@@ -387,30 +542,53 @@ function initializeApp() {
         console.error("Generate New Number button not found.");
     }
 
-    // Start listening for peers and signaling messages
-    listenToPeers(); // This will also announce our presence
-    listenForOffers();
-    listenForAnswers();
-    listenForIceCandidates();
+    // Initialize IRC Client (handles discovery and WebRTC signaling)
+    initializeIRCClient();
 
-    // Generate an initial number for the local peer.
-    generateAndBroadcastNumber(); // This will also call calculateAndDisplaySwarmMaximum
+    // Note: All Firebase-related signaling and presence announcement logic has been removed.
+    // IRC is now the sole mechanism for discovery and signaling.
+
+    // Peer timeout check
+    if (peerTimeoutInterval) clearInterval(peerTimeoutInterval);
+    peerTimeoutInterval = setInterval(() => {
+        const now = Date.now();
+        const timeout = 7 * 60 * 1000; // 7 minutes
+        for (const [nick, data] of ircPeers.entries()) {
+            if (now - data.lastHello > timeout) {
+                console.log(`Peer ${nick} (${data.peerId}) timed out (no HELLO for ${timeout/60000} mins). Removing.`);
+                ircPeers.delete(nick);
+                removePeerFromUI(data.peerId);
+                if (peerConnections[data.peerId]) {
+                    handleDisconnect(data.peerId);
+                }
+            }
+        }
+    }, 1 * 60 * 1000); // Check every minute
+
+    generateAndBroadcastNumber();
 }
 
-// Start the application once the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-// Graceful cleanup on window close
 window.addEventListener('beforeunload', () => {
     console.log("Cleaning up before unload...");
-    if (localPeerId) {
-        database.ref(`peers/${localPeerId}`).remove();
-        // Optionally, also remove all signaling messages related to this peer
-        // database.ref(`signaling/${localPeerId}`).remove(); // This is broad, be careful
 
-        // Close all peer connections
+    if (periodicHelloInterval) clearInterval(periodicHelloInterval);
+    if (peerTimeoutInterval) clearInterval(peerTimeoutInterval);
+
+    if (ircClient && ircClient.connected) {
+        console.log("Quitting IRC client.");
+        ircClient.quit("Leaving - P2P Swarm Node");
+    } else if (ircClient) {
+        console.log("IRC client exists but not connected, attempting to disconnect.");
+        ircClient.disconnect();
+    }
+
+    if (localPeerId) {
+        // Firebase cleanup has been removed.
+
         for (const peerId in peerConnections) {
-            handleDisconnect(peerId); // Use existing disconnect logic
+            handleDisconnect(peerId);
         }
     }
 });
