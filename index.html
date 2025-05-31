@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Number Swarm</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>P2P Number Swarm</h1>
+
+    <section id="local-peer">
+        <h2>Your Peer ID: <span id="local-peer-id"></span></h2>
+    </section>
+
+    <section id="connected-peers">
+        <h2>Connected Peers:</h2>
+        <ul id="peer-list">
+            <!-- Peer items will be added here -->
+        </ul>
+    </section>
+
+    <section id="number-management">
+        <h2>Your Number:</h2>
+        <p id="local-number-display">N/A</p>
+        <button id="generate-number-btn">Generate New Number</button>
+    </section>
+
+    <section id="swarm-data">
+        <h2>Swarm Maximum:</h2>
+        <p id="swarm-max-display">N/A</p>
+    </section>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+    <!-- Local application script -->
+    <script src="app.js"></script>
+</body>
+</html>
