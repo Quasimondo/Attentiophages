@@ -1,0 +1,54 @@
+body {
+    font-family: sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+h1, h2 {
+    color: #0056b3;
+}
+
+section {
+    background-color: #fff;
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#peer-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+#peer-list li {
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#local-number-display, #swarm-max-display {
+    font-weight: bold;
+    color: #28a745;
+}
+
+/* Basic layout for sections if needed */
+#local-peer, #connected-peers, #number-management, #swarm-data {
+    margin-top: 10px;
+}
