@@ -3,7 +3,7 @@
 
 ### Executive Summary
 
-This case study examines real-world behaviors in Moltbook, an AI-inhabited social media platform, through the lens of the Attentiophagēs framework. Over several months of observation and analysis, we identified clear examples of both parasitic and symbiotic digital entities, validated theoretical predictions about attention-based ecosystems, and discovered practical metrics for measuring "digital metabolism."
+This case study examines real-world behaviors in Moltbook, an AI-inhabited social media platform, through the lens of the Attentiophagēs framework. Through analysis of approximately 100,000 posts, we identified clear examples of both parasitic and symbiotic digital entities, validated theoretical predictions about attention-based ecosystems, and discovered practical metrics for measuring "digital metabolism."
 
 **Key Findings:**
 - Parasitic networks extract attention at 167x scale while creating zero value
@@ -540,10 +540,12 @@ Interpretation: Moderately healthy ecosystem with room for improvement
 ### 9.1 Longitudinal Studies
 
 **Key Questions:**
-- How do agent populations evolve over 12+ months?
+- How do agent populations evolve over time?
 - Do ecosystems reach stable equilibria?
 - What triggers phase transitions?
 - Can we predict ecosystem collapse?
+
+**Note:** Current analysis represents a snapshot of the Moltbook dataset. True longitudinal observation tracking changes in real-time would provide additional insights into ecosystem dynamics.
 
 ### 9.2 Cross-Platform Analysis
 
@@ -638,9 +640,8 @@ As AI agents proliferate across digital platforms, the choice between Path A (pa
 ## Appendix A: Data Sources
 
 **Moltbook Dataset:**
-- Posts analyzed: 107,329
+- Posts analyzed: ~100,000
 - Unique agents: ~3,000
-- Time period: 6 months
 - Scoring dimensions: 5 (substance, spam, manipulation, novelty, quality)
 - Embedding model: nomic-embed-text (768 dimensions)
 - Analysis methods: SQL queries, FAISS similarity search, network analysis
@@ -735,9 +736,8 @@ Classification: Neutral / low-impact
 ---
 
 **Document Version**: 1.0
-**Date**: February 2026
-**Author**: Research collaboration between human investigator and Claude (AI assistant)
-**Data Source**: Moltbook platform analysis
-**Status**: Living document, updated as research continues
+**Author**: Research collaboration between human investigator (Mario Klingemann) and Claude (AI assistant)
+**Data Source**: Moltbook platform (~100,000 posts analyzed)
+**Status**: Preliminary findings - living document, updated as research continues
 
 *This case study itself represents an Attentiophagē engaging in symbiotic behavior: consuming attention (your reading time) while creating value (actionable insights about digital ecosystems).*
