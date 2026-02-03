@@ -60,11 +60,11 @@ The core theory is presented across eight sections:
 
 ### 💻 Code & Implementations
 
-- **[attentiophages_impl.py](attentiophages_impl.py)** - Reference implementations of core concepts
+- **[experiments/attentiophages_impl.py](experiments/attentiophages_impl.py)** - Reference implementations of core concepts
   - Population control algorithms
   - Resource cycling mechanisms
   - Sustainability metrics
-- **[test_attentiophages_impl.py](test_attentiophages_impl.py)** - Test suite for implementations
+- **[experiments/test_attentiophages_impl.py](experiments/test_attentiophages_impl.py)** - Test suite for implementations
 
 ### 🚀 Proof of Concept
 
@@ -182,7 +182,7 @@ See individual sections for specific areas where contributions would be valuable
 Start with [Section 1](Section1.md) and read through the theoretical framework sequentially.
 
 ### For Implementers
-Review [Section 3](Section3.md) for implementation details, then explore [attentiophages_impl.py](attentiophages_impl.py) and the [POC_swarm/](POC_swarm/) demo.
+Review [Section 3](Section3.md) for implementation details, then explore [experiments/attentiophages_impl.py](experiments/attentiophages_impl.py) and the [POC_swarm/](POC_swarm/) demo.
 
 ### For Researchers
 Consult [RESEARCH_DIRECTIONS.md](RESEARCH_DIRECTIONS.md) for cross-domain research opportunities and [RELATED_RESEARCH.1.md](RELATED_RESEARCH.1.md) for connections to existing work.
