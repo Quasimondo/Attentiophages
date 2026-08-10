@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# POC_swarm browser bundle, built locally via browserify
+POC_swarm/irc-framework.browser.js
+node_modules/
+
+.DS_Store

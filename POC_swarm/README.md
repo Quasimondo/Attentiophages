@@ -1,47 +1,85 @@
-# WebRTC P2P Number Swarm Demo
+# WebRTC P2P Number Swarm (browser demo)
 
-## Project Description
+A proof of concept for serverless peer discovery: peers find each other in a
+public IRC channel, exchange WebRTC signalling over IRC private messages, then
+talk directly browser-to-browser. Each peer holds a number, and the swarm
+collectively computes the maximum.
 
-This project is a proof-of-concept (PoC) demonstrating a serverless peer-to-peer (P2P) network using WebRTC for direct communication between browsers and a public IRC network (Libera.Chat) for signaling (discovery and connection setup). The application allows peers to connect, each generating a number, and then collaboratively computes and displays the maximum number currently held by any peer in the "swarm."
+The point of the demo is the **rendezvous pattern**, not the number: a public,
+free, well-known channel used purely for introductions, after which traffic
+leaves the channel entirely.
 
-## IRC Signaling Details
+## Status: does not run in a browser yet
 
-This demo uses the Libera.Chat IRC network (`irc.libera.chat:6697` with SSL) for peer discovery and WebRTC signaling. Peers automatically connect to the channel `#poc-swarm-discovery` upon loading the application.
+Be clear about this before spending time on it. The original version of this
+demo had never been executed — `node --check app.js` failed outright.
 
-- **Discovery:** Peers announce their presence and discover others in this IRC channel using `HELLO` messages.
-- **Signaling:** WebRTC offers, answers, and ICE candidates are exchanged via private messages between peers over IRC.
+**Fixed in this revision (all verified by `test_signal_chunking.js`):**
 
-No specific IRC client or manual configuration is required from the user, as the application handles the IRC connection internally.
+1. **Syntax error, whole file.** The nick sanitiser used the character class
+   `[^a-zA-Z0-9_-\[...]`, in which `_-\[` parses as a range from `_` (0x5F) to
+   `[` (0x5B) — "Range out of order in character class". The script never
+   parsed, so none of it had ever run.
+2. **Off-by-two in the signal parser.** `"WEBRTC_SIGNAL:".length` is 14, but the
+   receive path sliced at `substring(16)`, so every `JSON.parse` threw.
+3. **No chunking.** An IRC protocol line is capped at 512 bytes including the
+   `PRIVMSG <target> :` prefix and CRLF. WebRTC SDP offers are routinely 1–4 KB.
+   Every offer would have been truncated. Signals are now split, tagged
+   `msgId:index:total`, and reassembled — tolerant of out-of-order and
+   duplicate chunks, with a 60s TTL on incomplete transfers.
+4. **`irc-framework` was never loaded.** `index.html` had the script tag
+   commented out, and placed *after* `app.js`, which uses it at startup.
 
-## Running the Demo
+**Still blocking, and not fixable in-page:**
 
-1.  Open the `index.html` file directly in a web browser.
-2.  To observe the P2P functionality, you need multiple instances of the application running:
-    *   Open `index.html` in several browser tabs.
-    *   For a more robust test, open `index.html` on different computers. They can be on the same network or different networks (WebRTC's STUN server will help with NAT traversal).
+5. **A browser cannot open a raw TCP socket.** `irc.libera.chat:6697` is plain
+   TLS-over-TCP, which is unreachable from page JavaScript regardless of which
+   library is loaded. Running this in a browser requires a WebSocket-to-IRC
+   gateway (e.g. `kiwiirc/webircgateway`) that you host.
 
-## How to Test / What to Observe
+That last item is worth sitting with, because it undercuts the demo's own
+premise: adding a gateway reintroduces exactly the server the design set out to
+remove. The rendezvous idea survives; the *browser* delivery of it does not.
 
-Once you have two or more instances running:
+## Running it
 
-*   **Local Peer ID:** Each instance will display its unique "Your Peer ID".
-*   **Connected Peers:** After a brief moment for discovery and connection setup via IRC, other active peer IDs should appear in the "Connected Peers" list on each instance.
-*   **Local Number:** Each instance will automatically generate an initial "Your Number". You can click the "Generate New Number" button to generate a new random number for that specific instance. This new number will be broadcast to other connected peers.
-*   **Swarm Maximum Number:** The "Swarm Maximum" display should update across all connected peers to show the highest number currently held by any single peer in the group.
-*   **Peer Departure:** If you close a tab or browser instance, that peer should disappear from the "Connected Peers" list on other instances. The "Swarm Maximum" will then recalculate based on the remaining peers.
+**Recommended — the version that works today:**
 
-## Troubleshooting
+```bash
+python3.11 ../swarm/irc_rendezvous.py --channel '#poc-swarm-discovery'
+```
 
-*   **Internet Connectivity:** Ensure you have a stable internet connection.
-*   **IRC Network:** The application connects to Libera.Chat. While generally stable, IRC network disruptions could temporarily affect peer discovery. The application has auto-reconnect logic.
-*   **Browser Compatibility:** Use a modern web browser that supports WebRTC (e.g., Chrome, Firefox, Edge, Safari).
-*   **Firewalls:** While the connection to IRC is typically made over standard SSL ports (similar to HTTPS) when using WebSockets via `irc-framework`, highly restrictive corporate firewalls might still interfere with IRC or WebRTC's STUN/TURN functionalities. If direct P2P connections fail, peers might not connect.
-*   **Console Errors:** Open your browser's developer console (usually F12) for error messages related to IRC connection or WebRTC.
-*   **NAT Traversal:** WebRTC uses STUN servers (like `stun:stun.l.google.com:19302` configured in this demo) to help peers discover each other across different networks and NATs. While this works in many cases, very restrictive network configurations or firewalls might still prevent direct P2P connections.
+Same rendezvous pattern, no gateway, no bundler, standard library only.
 
-## Developer Note: `irc-framework`
+**Browser version**, if you want to finish it:
 
-The application uses the `irc-framework` JavaScript library to handle IRC communication. For this demo, it's assumed that `IrcFramework` is globally available (e.g., as if included via a `<script>` tag pointing to a browser-compatible bundle). If you are modifying or rebuilding this project, you would typically install `irc-framework` via npm and use a bundler like Webpack or Browserify to include it in the browser-runnable `app.js`.
+1. Build the bundle and uncomment the script tag (see `index.html`).
+2. Stand up a WebSocket→IRC gateway and point `ircOptions` at it.
+3. Open `index.html` in two or more tabs.
 
----
-This demo provides a basic framework for P2P communication. Real-world applications would require more robust error handling, potentially TURN servers for more difficult NAT traversal scenarios, and more sophisticated application logic.
+Peers appear in the peer list after HELLO discovery, and "Swarm Maximum"
+converges across all instances.
+
+## Tests
+
+```bash
+node test_signal_chunking.js
+```
+
+Loads `app.js` into a `vm` context with a stubbed DOM and exercises the
+signalling transport: single-chunk round trip, 4 KB SDP across many chunks,
+line-length ceiling, out-of-order delivery, duplicate chunks, incomplete
+signals, malformed headers, and send-while-disconnected.
+
+## Known limitations beyond the above
+
+- **No authentication.** Any channel occupant can send a `HELLO` or a
+  `WEBRTC_SIGNAL`. Peer identity is a self-asserted random string. Do not put
+  anything trust-bearing on this channel — see `../docs/04-open-questions.md`.
+- **Libera.Chat is a real network with real operators.** It has connection
+  limits and policies on bots. Use a test channel, keep announcement rates low,
+  and register if you intend sustained use.
+- **NAT traversal** uses a public STUN server only. Symmetric NATs will need
+  TURN, which is not free.
+- Chunking splits on UTF-16 code units, not bytes. Fine for SDP and ICE
+  candidates, which are ASCII; revisit before sending arbitrary Unicode.

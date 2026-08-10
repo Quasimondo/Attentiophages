@@ -49,6 +49,99 @@ const ircOptions = {
 let ircClient = null;
 
 // -----------------------------------------------------------------------------
+// Signalling transport
+//
+// An IRC protocol line is capped at 512 bytes *including* the "PRIVMSG <target> :"
+// prefix and the trailing CRLF. A WebRTC SDP offer is routinely 1-4 KB, so
+// signals have to be chunked and reassembled. The first version of this demo
+// sent them whole, which truncated every offer before it left the client.
+//
+// Chunk wire format:  WEBRTC_SIGNAL:<msgId>:<index>:<total>:<payload fragment>
+// msgId is "<peerId>-<seq>"; peerId is generated as "user-<base36>" and never
+// contains a colon, so the header parses unambiguously.
+// -----------------------------------------------------------------------------
+const SIGNAL_PREFIX = "WEBRTC_SIGNAL:";
+const SIGNAL_CHUNK_CHARS = 300;          // conservative: leaves room for nick + header
+const SIGNAL_REASSEMBLY_TTL_MS = 60000;  // drop half-received signals after this
+
+let signalSeq = 0;
+const incomingSignals = new Map(); // msgId -> { total, parts, received, firstSeen }
+
+function sendSignal(remoteNick, signalObject) {
+    if (!ircClient || !ircClient.connected) {
+        console.warn("Cannot send signal: IRC client not connected.");
+        return false;
+    }
+    const payload = JSON.stringify(signalObject);
+    const msgId = `${localPeerId}-${++signalSeq}`;
+    const chunks = [];
+    for (let i = 0; i < payload.length; i += SIGNAL_CHUNK_CHARS) {
+        chunks.push(payload.slice(i, i + SIGNAL_CHUNK_CHARS));
+    }
+    chunks.forEach((chunk, index) => {
+        ircClient.say(remoteNick, `${SIGNAL_PREFIX}${msgId}:${index}:${chunks.length}:${chunk}`);
+    });
+    console.log(`Sent signal ${msgId} to ${remoteNick} in ${chunks.length} chunk(s).`);
+    return true;
+}
+
+function pruneStaleSignals() {
+    const now = Date.now();
+    for (const [msgId, entry] of incomingSignals.entries()) {
+        if (now - entry.firstSeen > SIGNAL_REASSEMBLY_TTL_MS) {
+            console.warn(`Dropping incomplete signal ${msgId} (${entry.received}/${entry.total} chunks).`);
+            incomingSignals.delete(msgId);
+        }
+    }
+}
+
+// Returns the parsed signal object once the last chunk arrives, otherwise null.
+function receiveSignalChunk(rawMessage) {
+    pruneStaleSignals();
+
+    const body = rawMessage.substring(SIGNAL_PREFIX.length);
+    const match = /^([^:]+):(\d+):(\d+):([\s\S]*)$/.exec(body);
+    if (!match) {
+        console.warn("Malformed signal chunk header, ignoring:", body.slice(0, 60));
+        return null;
+    }
+
+    const msgId = match[1];
+    const index = Number(match[2]);
+    const total = Number(match[3]);
+    const fragment = match[4];
+
+    if (!Number.isInteger(total) || total < 1 || index < 0 || index >= total) {
+        console.warn(`Signal ${msgId} has an out-of-range chunk header ${index}/${total}, ignoring.`);
+        return null;
+    }
+
+    let entry = incomingSignals.get(msgId);
+    if (!entry) {
+        entry = { total, parts: new Array(total).fill(null), received: 0, firstSeen: Date.now() };
+        incomingSignals.set(msgId, entry);
+    }
+    if (entry.total !== total) {
+        console.warn(`Signal ${msgId} changed chunk count mid-transfer, discarding.`);
+        incomingSignals.delete(msgId);
+        return null;
+    }
+    if (entry.parts[index] !== null) return null; // duplicate chunk
+
+    entry.parts[index] = fragment;
+    entry.received += 1;
+    if (entry.received < entry.total) return null;
+
+    incomingSignals.delete(msgId);
+    try {
+        return JSON.parse(entry.parts.join(""));
+    } catch (e) {
+        console.error(`Error parsing reassembled signal ${msgId}:`, e);
+        return null;
+    }
+}
+
+// -----------------------------------------------------------------------------
 // Utility Functions
 // -----------------------------------------------------------------------------
 function generatePeerId() {
@@ -97,7 +190,7 @@ function createPeerConnection(remotePeerId, isInitiator) {
             if (remoteNick && ircClient && ircClient.connected) {
                 console.log(`Sending ICE candidate to ${remoteNick} (PeerID: ${remotePeerId})`);
                 const candidateSignal = { type: "candidate", senderPeerId: localPeerId, data: event.candidate };
-                ircClient.say(remoteNick, `WEBRTC_SIGNAL:${JSON.stringify(candidateSignal)}`);
+                sendSignal(remoteNick, candidateSignal);
             } else if (!remoteNick) {
                 console.warn(`Cannot send ICE candidate: unknown IRC nick for peerId ${remotePeerId}.`);
             } else {
@@ -317,31 +410,29 @@ function initializeIRCClient() {
                 }
             }
         } else if (ircClient.user && target.toLowerCase() === ircClient.user.nick.toLowerCase()) { // Check PM to self
-            if (message.startsWith("WEBRTC_SIGNAL:")) {
-                try {
-                    const signalData = JSON.parse(message.substring(16));
-                    const remotePeerId = signalData.senderPeerId;
+            if (message.startsWith(SIGNAL_PREFIX)) {
+                // Returns null while chunks are still outstanding, or on a bad chunk.
+                const signalData = receiveSignalChunk(message);
+                if (!signalData) return;
 
-                    if (!ircPeers.has(senderNick) || ircPeers.get(senderNick).peerId !== remotePeerId) {
-                        console.warn(`Received WEBRTC_SIGNAL from ${senderNick} claiming to be ${remotePeerId}, but this doesn't match our records or peer not known via HELLO. Ignoring. Peer data from ircPeers:`, ircPeers.get(senderNick));
-                        return;
-                    }
+                const remotePeerId = signalData.senderPeerId;
+                if (!ircPeers.has(senderNick) || ircPeers.get(senderNick).peerId !== remotePeerId) {
+                    console.warn(`Received WEBRTC_SIGNAL from ${senderNick} claiming to be ${remotePeerId}, but this doesn't match our records or peer not known via HELLO. Ignoring. Peer data from ircPeers:`, ircPeers.get(senderNick));
+                    return;
+                }
 
-                    switch (signalData.type) {
-                        case "offer":
-                            handleOffer(remotePeerId, senderNick, signalData.data);
-                            break;
-                        case "answer":
-                            handleAnswer(remotePeerId, signalData.data);
-                            break;
-                        case "candidate":
-                            handleCandidate(remotePeerId, signalData.data);
-                            break;
-                        default:
-                            console.warn("Unknown WEBRTC_SIGNAL type:", signalData.type);
-                    }
-                } catch (e) {
-                    console.error("Error parsing WEBRTC_SIGNAL JSON:", e, "Raw message:", message.substring(16));
+                switch (signalData.type) {
+                    case "offer":
+                        handleOffer(remotePeerId, senderNick, signalData.data);
+                        break;
+                    case "answer":
+                        handleAnswer(remotePeerId, signalData.data);
+                        break;
+                    case "candidate":
+                        handleCandidate(remotePeerId, signalData.data);
+                        break;
+                    default:
+                        console.warn("Unknown WEBRTC_SIGNAL type:", signalData.type);
                 }
             }
         }
@@ -392,7 +483,7 @@ function handleOffer(remotePeerId, remoteNick, offerData) {
                 return;
             }
             const answerSignal = { type: "answer", senderPeerId: localPeerId, data: pc.localDescription };
-            ircClient.say(remoteNick, `WEBRTC_SIGNAL:${JSON.stringify(answerSignal)}`);
+            sendSignal(remoteNick, answerSignal);
             console.log(`Sent answer to ${remoteNick} (PeerID: ${remotePeerId})`);
         })
         .catch(error => {
@@ -461,7 +552,7 @@ function initiateConnectionToPeer(remotePeerId, remoteNick) {
                  throw new Error("IRC client not connected");
             }
             const offerSignal = { type: "offer", senderPeerId: localPeerId, data: pc.localDescription };
-            ircClient.say(remoteNick, `WEBRTC_SIGNAL:${JSON.stringify(offerSignal)}`);
+            sendSignal(remoteNick, offerSignal);
             console.log(`Sent offer to ${remoteNick} (PeerID: ${remotePeerId})`);
         })
         .catch(error => {
@@ -522,7 +613,11 @@ function initializeApp() {
     localPeerIdDisplay.textContent = localPeerId;
     console.log(`Local Peer ID: ${localPeerId}`);
 
-    let safeNick = localPeerId.replace(/[^a-zA-Z0-9_-\[\]\{\}\^`|]/g, '');
+    // RFC 2812 permits letters, digits and the "special" set []\`_^{|} plus '-'.
+    // The '-' must come last in the class: written as "_-\[" it was parsed as a
+    // range from '_' (0x5F) to '[' (0x5B), which is a SyntaxError -- this file
+    // did not parse at all before that was fixed.
+    let safeNick = localPeerId.replace(/[^a-zA-Z0-9\[\]\\`_^{|}-]/g, '');
     if (!safeNick) {
         safeNick = "swarmpeer" + Math.floor(Math.random() * 1000);
     }

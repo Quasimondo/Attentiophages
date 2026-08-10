@@ -31,9 +31,21 @@
         <p id="swarm-max-display">N/A</p>
     </section>
 
-    <!-- Local application script -->
+    <!--
+      irc-framework MUST load before app.js, which references IrcFramework at
+      startup. It is not vendored here. Build a browser bundle first:
+
+          npm install irc-framework browserify
+          npx browserify -r irc-framework -s IrcFramework -o irc-framework.browser.js
+
+      then uncomment the tag below.
+
+      Note this is necessary but NOT sufficient: a browser cannot open a raw TCP
+      socket to irc.libera.chat:6697, so a WebSocket-to-IRC gateway is also
+      required. See README.md. For a version that runs today, use
+      ../swarm/irc_rendezvous.py instead.
+    -->
+    <!-- <script src="irc-framework.browser.js"></script> -->
     <script src="app.js"></script>
-    <!-- Note: IrcFramework library would need to be included here if not bundled with app.js -->
-    <!-- e.g., <script src="path/to/irc-framework.browser.js"></script> -->
 </body>
 </html>

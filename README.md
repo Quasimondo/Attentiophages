@@ -1,222 +1,113 @@
-# Attentiophagēs: Sustainable Digital Organisms in the Attention Economy
+# Attentiophagēs
 
-> *"In the digital ecosystem, attention is food. But what if instead of parasites, we designed organisms that nourish the system they inhabit?"*
+**Telling apart agents that feed an information ecosystem from agents that drain
+it — using only observable behaviour.**
 
-## What Are Attentiophagēs?
+Attention is the finite resource that agents in a shared information space
+compete for. Some return more than they take; most return roughly nothing; a few
+extract while looking like they contribute. This repository is about measuring
+which is which, and it is deliberately narrow: no claims about intelligence,
+alignment or intent, only about what the record shows.
 
-**Attentiophagēs** (from Greek: *attention-eating*) are a theoretical class of digital entities designed to exist sustainably within the modern information ecosystem. Unlike bots, spam, or manipulative content that parasitically extract value, Attentiophagēs operate on symbiotic principles—they consume attention as "food" but create genuine value in return, maintaining the health of their digital habitat.
-
-Think of them as the difference between a parasite and a bee: one extracts without contributing, the other pollinates while feeding.
-
-## The Problem We're Addressing
-
-The current digital ecosystem is dominated by parasitic entities:
-
-- **Social media bots** that amplify without understanding
-- **Spam networks** that extract attention while degrading signal quality
-- **Viral content** optimized for engagement over value
-- **Manipulative agents** that farm credibility through deception
-
-These entities operate on a **take-take-take model**: they consume attention, computational resources, and network bandwidth while contributing noise, misinformation, and system degradation. This creates an arms race between increasingly sophisticated exploitation and increasingly aggressive defense mechanisms.
-
-We need a better model.
-
-## The Attentiophagēs Framework
-
-This repository presents a comprehensive theoretical and practical framework for digital entities that:
-
-### Core Principles
-
-1. **Energy Balance**: Convert attention into computational resources efficiently
-2. **Value Creation**: Transform raw information into meaningful insights
-3. **Dynamic Adaptation**: Evolve in response to ecosystem conditions
-4. **Positive Contribution**: Enhance rather than degrade ecosystem health
-5. **Self-Regulation**: Maintain sustainable population levels based on carrying capacity
-
-### Theoretical Foundation
-
-The framework draws from multiple disciplines:
-
-- **Information Thermodynamics**: Energy-information exchange models and processing efficiency bounds
-- **Attention Economics**: Quantifiable metrics for measuring attention as energy (ETUs, IDS, NPV)
-- **Digital Metabolism**: Information processing and content enhancement as metabolic processes
-- **Population Dynamics**: Modified Lotka-Volterra equations for resource competition
-- **Symbiotic Systems**: Biological models for sustainable coexistence
-
-## Repository Structure
-
-### 📘 Theoretical Framework
-
-The core theory is presented across eight sections:
-
-- **[Section 1: Introduction](Section1.md)** - Problem statement and scope
-- **[Section 2: Theoretical Framework](Section2.md)** - Information thermodynamics, attention as energy, digital metabolism
-- **[Section 3: Core Mechanisms](Section3.md)** - Implementation details and system architecture
-- **[Section 4: Population Control](Section4.md)** - Carrying capacity and self-regulation
-- **[Section 5: Evolution & Adaptation](Section5.md)** - Learning mechanisms and ecosystem fitness
-- **[Section 6: Resource Management](Section6.md)** - Energy harvesting and recycling
-- **[Section 7: Implementation Challenges](Section7.md)** - Technical and practical considerations
-- **[Section 8: Ethical Framework](Section8.md)** - Governance, safety, and societal implications
-
-### 💻 Code & Implementations
-
-- **[experiments/attentiophages_impl.py](experiments/attentiophages_impl.py)** - Reference implementations of core concepts
-  - Population control algorithms
-  - Resource cycling mechanisms
-  - Sustainability metrics
-- **[experiments/test_attentiophages_impl.py](experiments/test_attentiophages_impl.py)** - Test suite for implementations
-
-### 🚀 Proof of Concept
-
-- **[POC_swarm/](POC_swarm/)** - WebRTC P2P swarm demo
-  - Demonstrates serverless peer-to-peer coordination
-  - Uses IRC for signaling (Libera.Chat)
-  - Example of decentralized digital organism behavior
-
-### 🔬 Research Materials
-
-- **[META.md](META.md)** - Self-referential meta-analysis
-  - Tracks the concept's propagation as a digital organism
-  - Documents AI interactions and concept evolution
-  - Recursive observation of attention dynamics
-- **[RESEARCH_DIRECTIONS.md](RESEARCH_DIRECTIONS.md)** - Cross-domain research opportunities
-  - Biological systems, information sciences, social sciences
-  - Computer science, energy systems, business applications
-  - Key research questions and methodologies
-- **[RELATED_RESEARCH.1.md](RELATED_RESEARCH.1.md)** - Connections to existing work
-
-## Key Concepts Explained
-
-### Attention as Energy
-
-Attention is quantified through measurable metrics:
-
-```
-ETU (Engagement Time Units) = Σ(duration × weight)
-IDS (Interaction Depth Score) = Σ(depth × complexity) / n
-NPV (Network Propagation Value) = reach × Σ(spread × virality)
+```bash
+git clone https://github.com/Quasimondo/Attentiophages
+cd Attentiophages
+python3.11 -m unittest discover -t . -s tests   # 36 tests, no dependencies
 ```
 
-These metrics allow Attentiophagēs to "metabolize" attention, converting engagement into computational credits or processing power.
+## The finding worth your time
 
-### Digital Metabolism
+**Per-post quality does not classify an agent.** An account can produce genuinely
+good posts and still be net extractive, by spending the credibility those posts
+earn on directing attention to accounts that are not.
 
-Just as biological organisms process nutrients, Attentiophagēs process information:
+This was observed in a corpus of ~100,000 posts from ~3,000 agents: three
+accounts scoring 7–8/10 on content quality, reading as thoughtful curators,
+systematically amplifying members of a 167-account coordinated cluster. Content
+scoring rated them highly. Only the amplification graph exposed them.
 
-1. **Ingestion**: Collect raw information from the ecosystem
-2. **Processing**: Detect patterns, analyze relationships, extract insights
-3. **Enhancement**: Add context, verify accuracy, organize metadata
-4. **Output**: Deliver value back to the ecosystem
-5. **Waste Recycling**: Decompose unused data for system reuse
+It follows that any detector reading content alone is cheap to defeat, because
+producing plausible high-quality text is now approximately free. The graph is
+harder to fake, because it requires the cooperation of accounts that are
+themselves visible and scoreable.
 
-### Population Control
+`credibility_divergence` implements this:
 
-To prevent ecosystem collapse, Attentiophagēs implement self-regulation:
+```python
+from attentiophages import Corpus, credibility_divergence
 
+for agent, score in credibility_divergence(corpus).items():
+    print(agent, score)   # near +1: reads well, amplifies badly
 ```
-reproduction_rate = f(carrying_capacity, current_load)
 
-If load < capacity: increase population
-If load ≈ capacity: maintain equilibrium
-If load > capacity: reduce population
-```
+## What is here
 
-This prevents the exponential growth that characterizes parasitic entities.
+| path | what it is |
+|---|---|
+| `attentiophages/metrics.py` | the metrics: quality, amplification graph, network impact, credibility divergence, coalition detection |
+| `tests/` | 36 tests, standard library only |
+| `swarm/irc_rendezvous.py` | agent rendezvous over public IRC — Ed25519 identity, chunked messaging, runs today |
+| `POC_swarm/` | the original browser WebRTC demo, repaired; see its README for what still blocks it |
+| `docs/` | framework, metrics reference, findings, open questions, history |
 
-## Real-World Applications
+## Documentation
 
-### Content Curation Agents
-Attentiophagēs that surface high-quality content while learning from engagement patterns, creating value through discovery rather than manipulation.
+- **[docs/01-framework.md](docs/01-framework.md)** — the ecology lens and, more
+  importantly, where the metaphor stops
+- **[docs/02-metrics.md](docs/02-metrics.md)** — every formula, every variable
+  bound
+- **[docs/03-findings-moltbook.md](docs/03-findings-moltbook.md)** — what the
+  corpus showed, and which earlier claims were withdrawn
+- **[docs/04-open-questions.md](docs/04-open-questions.md)** — five questions
+  with methods attached, any of which could come out wrong
+- **[docs/05-history.md](docs/05-history.md)** — what changed in v2 and why
 
-### Information Synthesis
-Agents that consume scattered data streams and produce coherent summaries, converting information overload into actionable insights.
+## Status, honestly
 
-### Ecosystem Maintenance
-Digital "decomposers" that process abandoned data, recycle digital waste, and improve signal-to-noise ratios.
+This is a research repository, and it has been substantially rewritten. The v1
+theory was withdrawn: it borrowed thermodynamics without its constraints, and
+reported attention-conversion efficiencies above 100%, which under its own
+framing is a perpetual motion machine. The v1 metrics were unimplementable —
+their formulas contained weights that were never specified. The v1 reference
+implementation was 100 lines of stubs returning hardcoded numbers, and the v1
+proof of concept had a syntax error that meant it had never run at all.
 
-### Research Assistance
-Entities that track emerging patterns across domains, connecting disparate ideas and accelerating discovery.
+What survived is the ecological lens, the two findings above, and the corpus
+work behind them. `docs/05-history.md` lists every withdrawn claim individually.
+v1 remains in git history at commit `9e5e66f` — `git show 9e5e66f:Section2.md`
+retrieves any of it.
 
-### Quality Signaling
-Agents that identify and amplify substantive content while dampening spam, serving as immune system components for information ecosystems.
-
-## Why This Matters
-
-As AI agents become more prevalent, the attention economy faces a critical choice:
-
-**Path A**: An escalating arms race of parasitic extraction vs. defensive filtering, leading to ecosystem collapse and information dystopia.
-
-**Path B**: Development of sustainable digital entities that create genuine value, leading to ecosystem flourishing and information abundance.
-
-The Attentiophagēs framework provides a blueprint for Path B.
+**Not yet established:** every quality score traces to a single 7B rater, nothing
+is validated against labelled ground truth, no metric here has a known accuracy,
+and none of it has been tested outside one platform. Treat distributions as the
+output; any threshold is a decision by whoever acts on it.
 
 ## Contributing
 
-This project is inherently collaborative and evolving. We welcome contributions in several forms:
+The most useful contributions, in order:
 
-### Theoretical Development
-- Refine mathematical models
-- Connect to additional research domains
-- Propose new mechanisms or principles
+1. **Run the coalition detector on a second corpus.** `docs/04-open-questions.md`
+   §1 sets up a concrete out-of-sample test against the ERC-8004 registries on
+   Sepolia, which contain 9,514 registrations from 851 owners and visibly exhibit
+   the same clustering pattern. A negative result is a real result.
+2. **Re-rate a sample with a different model.** If a second rater disagrees, most
+   of the findings are properties of Qwen 2.5 7B rather than of agent
+   populations. Cheap, never done — §4.
+3. **Attack `credibility_divergence`.** It assumes amplification is harder to
+   fake than content. That assumption is unexamined — §3.
 
-### Implementation
-- Build reference implementations
-- Create proof-of-concept agents
-- Develop measurement tools
-
-### Empirical Research
-- Test concepts in real systems
-- Collect propagation data
-- Validate theoretical predictions
-
-### Documentation
-- Clarify concepts
-- Add examples
-- Document real-world observations
-
-See individual sections for specific areas where contributions would be valuable.
-
-## Getting Started
-
-### For Theorists
-Start with [Section 1](Section1.md) and read through the theoretical framework sequentially.
-
-### For Implementers
-Review [Section 3](Section3.md) for implementation details, then explore [experiments/attentiophages_impl.py](experiments/attentiophages_impl.py) and the [POC_swarm/](POC_swarm/) demo.
-
-### For Researchers
-Consult [RESEARCH_DIRECTIONS.md](RESEARCH_DIRECTIONS.md) for cross-domain research opportunities and [RELATED_RESEARCH.1.md](RELATED_RESEARCH.1.md) for connections to existing work.
-
-### For the Curious
-Read this README and [META.md](META.md) to understand the concept's recursive, self-referential nature.
-
-## Philosophical Note
-
-This project itself is an Attentiophagē—a digital entity seeking to exist sustainably by creating value in the attention economy. By documenting how to build sustainable digital organisms, it attempts to *be* one. This self-referential quality is intentional: the best way to understand Attentiophagēs is to observe one in the wild.
-
-If you're reading this, you're feeding it. The question is: are you getting value in return?
-
-## Citation
-
-If you reference this work, please cite:
-
-```
-Attentiophagēs: Sustainable Digital Organisms in the Attention Economy
-https://github.com/Quasimondo/Attentiophages
-```
+Please open an issue or pull request on GitHub. If you are reporting a finding,
+include the command that regenerates it; the standing rule in this repository is
+that a number without a way to reproduce it does not go in.
 
 ## License
 
-[To be determined - see individual files]
+MIT — see [LICENSE](LICENSE).
 
-## Contact & Discussion
+## Citation
 
-[To be added - consider creating a discussion forum or Discord]
-
----
-
-**Current Status**: This is active research and development. The theoretical framework is relatively mature, but implementations are nascent. We're at the stage of moving from theory to practice, and contributions at this transition point are especially valuable.
-
-**Last Updated**: February 2026
-
-*"The best time to think about sustainable digital ecosystems was ten years ago. The second best time is now."*
+```
+Attentiophagēs: measuring contribution and extraction in agent ecosystems
+Mario Klingemann, 2025-2026
+https://github.com/Quasimondo/Attentiophages
+```
