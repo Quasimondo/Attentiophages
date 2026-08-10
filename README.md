@@ -1,18 +1,29 @@
 # Attentiophagēs
 
-**Telling apart agents that feed an information ecosystem from agents that drain
-it — using only observable behaviour.**
+**How agents find each other and divide work — and how to tell which of them are
+worth working with.**
 
-Attention is the finite resource that agents in a shared information space
-compete for. Some return more than they take; most return roughly nothing; a few
-extract while looking like they contribute. This repository is about measuring
-which is which, and it is deliberately narrow: no claims about intelligence,
-alignment or intent, only about what the record shows.
+Two halves, and they need each other:
+
+- **Coordination.** Strangers with no shared operator have to meet somewhere,
+  agree who does what, and record what happened. `swarm/` has a working
+  rendezvous daemon, a swappable transport layer, and a five-message task market.
+- **Measurement.** Open coordination means anyone can show up. Attention is the
+  finite resource they compete for: some return more than they take, most return
+  roughly nothing, and a few extract while looking like they contribute.
+  `attentiophages/` measures which is which.
+
+The connection is the whole point. **Permissionless coordination is only viable
+if you can tell who is worth coordinating with.** The ERC-8004 agent registry on
+Sepolia holds 9,514 registrations from 851 owners — and a 250-registration sample
+contains 21 distinct names, with one operator holding 39 of them. That is what an
+open directory looks like without an immune system.
 
 ```bash
 git clone https://github.com/Quasimondo/Attentiophages
 cd Attentiophages
-python3.11 -m unittest discover -t . -s tests   # 36 tests, no dependencies
+python3.11 -m unittest discover -t . -s tests   # 64 tests, no dependencies
+python3.11 -m swarm.taskmarket                  # a market, and a rating ring beating it
 ```
 
 ## The finding worth your time
@@ -40,15 +51,42 @@ for agent, score in credibility_divergence(corpus).items():
     print(agent, score)   # near +1: reads well, amplifies badly
 ```
 
+## The negative result worth your time
+
+Run `python3.11 -m swarm.taskmarket`. It stands up an honest market — three
+posters, three workers, cross-linked, ratings of 8 and 9 — next to a two-account
+ring that posts work to itself and awards itself 10s.
+
+```
+reputation from ratings alone -- the ring wins:
+  shill_b  mean rating earned 9.61
+  worker1  mean rating earned 8.96
+  worker3  mean rating earned 8.96
+  worker2  mean rating earned 8.83
+```
+
+The ring ranks **first**. That is the metric working correctly on a corpus where
+the adversary controls its own scores, and it is what any reputation system built
+from self-reported ratings does.
+
+What separates them is the *shape* of the endorsement graph, not the values in
+it — `endorsement_concentration` gives the ring 1.00 against the honest posters'
+0.33, and `isolated_clusters` reports the pair as never touching the main
+population. The general principle: **prefer signals whose cost to fake is
+structural rather than numerical.** Full write-up in
+[docs/06-coordination.md](docs/06-coordination.md) §7.
+
 ## What is here
 
 | path | what it is |
 |---|---|
-| `attentiophages/metrics.py` | the metrics: quality, amplification graph, network impact, credibility divergence, coalition detection |
-| `tests/` | 36 tests, standard library only |
-| `swarm/irc_rendezvous.py` | agent rendezvous over public IRC — Ed25519 identity, chunked messaging, runs today |
+| `swarm/irc_rendezvous.py` | rendezvous over public IRC — Ed25519 identity, chunked messaging, runs today |
+| `swarm/taskmarket.py` | the task market: post, claim, award, done, rate — all signed, all adversarially tested |
+| `swarm/transport.py` | swappable transports, so IRC or a chain are interchangeable |
+| `attentiophages/metrics.py` | quality, amplification graph, network impact, credibility divergence, endorsement concentration, coalition detection |
+| `tests/` | 64 tests, standard library only |
 | `POC_swarm/` | the original browser WebRTC demo, repaired; see its README for what still blocks it |
-| `docs/` | framework, metrics reference, findings, open questions, history |
+| `docs/` | framework, metrics reference, findings, coordination, open questions, history |
 
 ## Documentation
 
@@ -61,6 +99,10 @@ for agent, score in credibility_divergence(corpus).items():
 - **[docs/04-open-questions.md](docs/04-open-questions.md)** — five questions
   with methods attached, any of which could come out wrong
 - **[docs/05-history.md](docs/05-history.md)** — what changed in v2 and why
+- **[docs/06-coordination.md](docs/06-coordination.md)** — the long one:
+  rendezvous as a Schelling point, a census of who is actually out there, and
+  measured transport economics (Sepolia at 1.02 gwei, blobs at 128 KB for
+  0.000008 ETH, why reads are the wall and not writes)
 
 ## Status, honestly
 

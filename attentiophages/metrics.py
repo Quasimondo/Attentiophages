@@ -34,6 +34,8 @@ __all__ = [
     "NetworkImpact",
     "network_impact",
     "credibility_divergence",
+    "endorsement_concentration",
+    "isolated_clusters",
     "Coalition",
     "detect_coalitions",
     "attention_units",
@@ -379,6 +381,74 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
     na = sum(x * x for x in a) ** 0.5
     nb = sum(y * y for y in b) ** 0.5
     return dot / (na * nb) if na and nb else 0.0
+
+
+def endorsement_concentration(corpus: Corpus) -> dict[str, float]:
+    """Herfindahl index of each agent's outgoing amplification, in (0, 1].
+
+    ``1.0`` means every endorsement an agent has ever made went to a single
+    counterparty; ``1/n`` means they were spread evenly over ``n``.
+
+    This exists because scores alone cannot detect a rating ring. Two accounts
+    that only ever endorse each other can award themselves whatever ratings they
+    like, and a quality metric built from those ratings will rank them at the
+    top -- ``swarm/taskmarket.py``'s demo shows exactly that happening. What
+    distinguishes the ring is not the value of its endorsements but their
+    *shape*: total concentration on a counterparty that reciprocates.
+
+    High concentration is suspicious, not damning. A specialist with one client
+    looks identical. Read it alongside :func:`isolated_clusters`.
+    """
+    edges = amplification_edges(corpus)
+    out_weight: dict[str, float] = defaultdict(float)
+    for (src, _), weight in edges.items():
+        out_weight[src] += weight
+
+    concentration: dict[str, float] = defaultdict(float)
+    for (src, _), weight in edges.items():
+        share = weight / out_weight[src]
+        concentration[src] += share * share
+    return dict(concentration)
+
+
+def isolated_clusters(corpus: Corpus) -> list[tuple[str, ...]]:
+    """Groups of agents whose amplification never reaches the main population.
+
+    Treats the amplification graph as undirected, finds its connected
+    components, and returns every component except the largest, ordered by size.
+
+    A closed rating ring is a component unto itself: its members endorse each
+    other and nobody else, and nobody outside endorses them. That structure
+    survives any choice of ratings, which is what makes it a better signal than
+    the ratings themselves.
+
+    Small corpora produce many small components for innocent reasons. This is a
+    filter for attention, not a verdict.
+    """
+    edges = amplification_edges(corpus)
+    neighbours: dict[str, set[str]] = defaultdict(set)
+    for src, dst in edges:
+        neighbours[src].add(dst)
+        neighbours[dst].add(src)
+
+    seen: set[str] = set()
+    components: list[tuple[str, ...]] = []
+    for start in neighbours:
+        if start in seen:
+            continue
+        stack, group = [start], []
+        seen.add(start)
+        while stack:
+            node = stack.pop()
+            group.append(node)
+            for other in neighbours[node]:
+                if other not in seen:
+                    seen.add(other)
+                    stack.append(other)
+        components.append(tuple(sorted(group)))
+
+    components.sort(key=len, reverse=True)
+    return components[1:]
 
 
 @dataclass(frozen=True)

@@ -18,6 +18,8 @@ from attentiophages.metrics import (
     attention_units,
     credibility_divergence,
     detect_coalitions,
+    endorsement_concentration,
+    isolated_clusters,
     network_impact,
 )
 
@@ -189,6 +191,58 @@ class TestPercentiles(unittest.TestCase):
 
     def test_empty_input(self) -> None:
         self.assertEqual(_percentiles({}), {})
+
+
+class TestEndorsementConcentration(unittest.TestCase):
+    def test_single_counterparty_is_one(self) -> None:
+        corpus = Corpus(
+            posts("ring_a", 6, 5.0, mentions=("ring_b",)) + posts("ring_b", 6, 5.0)
+        )
+        self.assertAlmostEqual(endorsement_concentration(corpus)["ring_a"], 1.0)
+
+    def test_spread_endorsements_score_low(self) -> None:
+        corpus = Corpus(
+            posts("broad", 9, 5.0, mentions=("x", "y", "z"))
+            + posts("x", 3, 5.0) + posts("y", 3, 5.0) + posts("z", 3, 5.0)
+        )
+        self.assertAlmostEqual(endorsement_concentration(corpus)["broad"], 1 / 3, places=6)
+
+    def test_ring_is_more_concentrated_than_honest_poster(self) -> None:
+        corpus = Corpus(
+            posts("ring_a", 6, 5.0, mentions=("ring_b",)) + posts("ring_b", 6, 5.0)
+            + posts("fair", 9, 5.0, mentions=("x", "y", "z"))
+            + posts("x", 3, 5.0) + posts("y", 3, 5.0) + posts("z", 3, 5.0)
+        )
+        concentration = endorsement_concentration(corpus)
+        self.assertGreater(concentration["ring_a"], concentration["fair"])
+
+
+class TestIsolatedClusters(unittest.TestCase):
+    def _corpus(self) -> Corpus:
+        everything = []
+        for name in ("p1", "p2"):
+            everything += posts(name, 6, 5.0, mentions=("w1", "w2", "w3"))
+        for name in ("w1", "w2", "w3"):
+            everything += posts(name, 3, 8.0)
+        everything += posts("ring_a", 4, 5.0, mentions=("ring_b",))
+        everything += posts("ring_b", 4, 9.0)
+        return Corpus(everything)
+
+    def test_closed_ring_is_reported(self) -> None:
+        clusters = isolated_clusters(self._corpus())
+        self.assertEqual(clusters, [("ring_a", "ring_b")])
+
+    def test_main_population_is_not_reported(self) -> None:
+        members = {a for cluster in isolated_clusters(self._corpus()) for a in cluster}
+        for agent in ("p1", "p2", "w1", "w2", "w3"):
+            self.assertNotIn(agent, members)
+
+    def test_fully_connected_corpus_yields_nothing(self) -> None:
+        corpus = Corpus(
+            posts("a", 3, 5.0, mentions=("b",)) + posts("b", 3, 5.0, mentions=("c",))
+            + posts("c", 3, 5.0, mentions=("a",))
+        )
+        self.assertEqual(isolated_clusters(corpus), [])
 
 
 class TestAttentionUnitsRefusesToGuess(unittest.TestCase):

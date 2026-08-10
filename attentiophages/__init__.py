@@ -16,6 +16,8 @@ from attentiophages.metrics import (
     attention_units,
     credibility_divergence,
     detect_coalitions,
+    endorsement_concentration,
+    isolated_clusters,
     network_impact,
 )
 
@@ -33,6 +35,8 @@ __all__ = [
     "attention_units",
     "credibility_divergence",
     "detect_coalitions",
+    "endorsement_concentration",
+    "isolated_clusters",
     "network_impact",
     "__version__",
 ]

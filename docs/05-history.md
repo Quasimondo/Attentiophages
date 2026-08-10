@@ -67,7 +67,26 @@ hardcoded values — `calculateSystemCapacity()` returned `1000`,
 Python class in Sections 3, 4 and 5 consisted of method names calling other
 methods that were never defined anywhere.
 
-There are now 36 passing tests across `tests/`.
+There are now 64 passing tests across `tests/`.
+
+### The coordination half was restored and made first-class
+
+The first pass of this rewrite narrowed the repository to measurement, which lost
+the original interest in how agents find each other and work together. That
+thread is back, and now carries working code rather than prose:
+
+- `swarm/transport.py` — a transport is a dumb pipe, explicitly **not** a trust
+  boundary, so IRC and a chain are interchangeable.
+- `swarm/taskmarket.py` — five signed messages (`POST`, `CLAIM`, `AWARD`, `DONE`,
+  `RATE`) with content-addressed task ids and signature-derived authority.
+- `docs/06-coordination.md` — rendezvous as a Schelling-point problem, a census
+  of the ERC-8004 registry, and measured transport economics.
+
+Building it produced a result that contradicted the intended demo: reputation
+computed from self-reported ratings ranks a two-account rating ring *above* every
+honest worker. That negative result was kept rather than engineered away, and
+`endorsement_concentration` and `isolated_clusters` were added because graph
+shape is a signal an adversary cannot fake by choosing better numbers.
 
 ### The case study was rewritten
 

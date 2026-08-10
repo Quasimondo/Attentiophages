@@ -8,10 +8,15 @@ network. Nothing here touches Libera.Chat.
 from __future__ import annotations
 
 import json
+import logging
 import socket
 import threading
 import time
 import unittest
+
+# Several tests deliberately feed malformed and incomplete chunks; the warnings
+# they provoke are the expected behaviour, not test failures.
+logging.getLogger("rendezvous").setLevel(logging.CRITICAL)
 
 from swarm.irc_rendezvous import (
     CRYPTO_AVAILABLE,
