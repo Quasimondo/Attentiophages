@@ -36,6 +36,8 @@ __all__ = [
     "credibility_divergence",
     "endorsement_concentration",
     "isolated_clusters",
+    "SharedIdentity",
+    "shared_identity_clusters",
     "Coalition",
     "detect_coalitions",
     "attention_units",
@@ -381,6 +383,57 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
     na = sum(x * x for x in a) ** 0.5
     nb = sum(y * y for y in b) ** 0.5
     return dot / (na * nb) if na and nb else 0.0
+
+
+@dataclass(frozen=True)
+class SharedIdentity:
+    """One label claimed by many independent controllers."""
+
+    label: str
+    controllers: tuple[str, ...]
+    claims: int
+
+    @property
+    def controller_count(self) -> int:
+        return len(self.controllers)
+
+
+def shared_identity_clusters(
+    claims: Iterable[tuple[str, str]],
+    min_controllers: int = 3,
+) -> list[SharedIdentity]:
+    """Find labels claimed repeatedly from *distinct* controlling accounts.
+
+    ``claims`` is an iterable of ``(label, controller)`` pairs -- a display name
+    and whoever registered it. A label appearing under many separate controllers
+    is the signature of one operator minting fresh accounts per registration,
+    which is the cheapest way to defeat both of the other detectors here:
+
+    * grouping by controller sees one registration each, so nothing stands out;
+    * :func:`detect_coalitions` needs a numeric suffix to strip, and a reused
+      name has none.
+
+    This was added after :func:`detect_coalitions` failed an out-of-sample test
+    against a live agent registry, where the dominant coordination pattern was
+    exactly this and neither existing method saw it. See
+    ``docs/07-registry-audit.md``.
+
+    Reuse alone is not proof of a single operator -- "Payer" and "Test" are names
+    two strangers might pick independently. Weight generic labels accordingly.
+    """
+    by_label: dict[str, list[str]] = defaultdict(list)
+    for label, controller in claims:
+        if isinstance(label, str) and label.strip():
+            by_label[label.strip()].append(controller)
+
+    results = [
+        SharedIdentity(label=label, controllers=tuple(sorted(set(controllers))),
+                       claims=len(controllers))
+        for label, controllers in by_label.items()
+        if len(set(controllers)) >= min_controllers
+    ]
+    results.sort(key=lambda s: (-s.controller_count, -s.claims, s.label))
+    return results
 
 
 def endorsement_concentration(corpus: Corpus) -> dict[str, float]:

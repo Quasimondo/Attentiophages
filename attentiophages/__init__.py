@@ -7,6 +7,7 @@ post corpus; anything that is not returns :data:`~attentiophages.metrics.UNAVAIL
 from attentiophages.metrics import (
     UNAVAILABLE,
     Coalition,
+    SharedIdentity,
     Corpus,
     NetworkImpact,
     Post,
@@ -19,6 +20,7 @@ from attentiophages.metrics import (
     endorsement_concentration,
     isolated_clusters,
     network_impact,
+    shared_identity_clusters,
 )
 
 __version__ = "2.0.0"
@@ -36,7 +38,9 @@ __all__ = [
     "credibility_divergence",
     "detect_coalitions",
     "endorsement_concentration",
+    "SharedIdentity",
     "isolated_clusters",
     "network_impact",
+    "shared_identity_clusters",
     "__version__",
 ]

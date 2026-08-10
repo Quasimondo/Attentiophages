@@ -21,6 +21,7 @@ from attentiophages.metrics import (
     endorsement_concentration,
     isolated_clusters,
     network_impact,
+    shared_identity_clusters,
 )
 
 DAY = 86_400.0
@@ -191,6 +192,42 @@ class TestPercentiles(unittest.TestCase):
 
     def test_empty_input(self) -> None:
         self.assertEqual(_percentiles({}), {})
+
+
+class TestSharedIdentityClusters(unittest.TestCase):
+    def test_one_label_many_controllers_is_flagged(self) -> None:
+        claims = [("Payer", f"0x{i:040x}") for i in range(6)]
+        found = shared_identity_clusters(claims)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].label, "Payer")
+        self.assertEqual(found[0].controller_count, 6)
+        self.assertEqual(found[0].claims, 6)
+
+    def test_one_controller_registering_repeatedly_is_not_flagged(self) -> None:
+        """That pattern is what grouping by controller already catches."""
+        claims = [("Trust City Exchange", "0xabc") for _ in range(500)]
+        self.assertEqual(shared_identity_clusters(claims), [])
+
+    def test_threshold_is_on_distinct_controllers(self) -> None:
+        claims = [("A", "0x1"), ("A", "0x1"), ("A", "0x2")]
+        self.assertEqual(shared_identity_clusters(claims, min_controllers=3), [])
+        self.assertEqual(len(shared_identity_clusters(claims, min_controllers=2)), 1)
+
+    def test_sorted_by_controller_count(self) -> None:
+        claims = ([("few", f"0x{i}") for i in range(3)]
+                  + [("many", f"0x{i}a") for i in range(9)])
+        found = shared_identity_clusters(claims)
+        self.assertEqual([s.label for s in found], ["many", "few"])
+
+    def test_blank_labels_ignored(self) -> None:
+        claims = [("", "0x1"), ("   ", "0x2"), (None, "0x3")]
+        self.assertEqual(shared_identity_clusters(claims), [])
+
+    def test_labels_are_stripped_before_grouping(self) -> None:
+        claims = [("Payer", "0x1"), (" Payer", "0x2"), ("Payer ", "0x3")]
+        found = shared_identity_clusters(claims)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].controller_count, 3)
 
 
 class TestEndorsementConcentration(unittest.TestCase):

@@ -6,14 +6,24 @@ with a stated method
 and a result that is not known in advance — the difference being that these can
 come out wrong.
 
-## 1. Does coalition detection survive an out-of-sample corpus?
+## 1. Does coalition detection survive an out-of-sample corpus? — **ANSWERED: no**
 
-`detect_coalitions` was built from one hand-found cluster in one corpus. That is
-one example, and a detector fitted to one example usually finds nothing else.
+Run against the live ERC-8004 registry on 2026-08-10. `detect_coalitions` found
+one cluster, entirely inside a group the trivial owner-address baseline had
+already flagged, and nothing else. Zero value added. Meanwhile the dominant
+coordination pattern in that corpus — one name registered from a fresh address
+every time — was invisible to both methods, which is why
+`shared_identity_clusters` now exists.
 
-**A test is available now.** The ERC-8004 agent registries are live on Ethereum
-Sepolia and registration is permissionless and effectively free, so Sybil
-clusters should be the default rather than the exception.
+Full result, method and limits: **[docs/07-registry-audit.md](07-registry-audit.md)**.
+Reproduce with `python3.11 tools/erc8004_audit.py --sample 800`.
+
+The remainder of this section is the original setup, kept because the reasoning
+still applies to the next corpus someone tries.
+
+The ERC-8004 agent registries are live on Ethereum Sepolia and registration is
+permissionless and effectively free, so Sybil clusters should be the default
+rather than the exception.
 
 Measured directly against `IdentityRegistry`
 `0x8004A818BFB912233c491871b3d84c89A494BD9e` on 2026-08-10, by counting ERC-721

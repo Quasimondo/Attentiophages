@@ -15,14 +15,15 @@ Two halves, and they need each other:
 
 The connection is the whole point. **Permissionless coordination is only viable
 if you can tell who is worth coordinating with.** The ERC-8004 agent registry on
-Sepolia holds 9,514 registrations from 851 owners — and a 250-registration sample
-contains 21 distinct names, with one operator holding 39 of them. That is what an
-open directory looks like without an immune system.
+Sepolia holds 9,514 registrations from 851 owners. In an 800-registration sample,
+678 usable records carry **39 distinct names**, and a single address accounts for
+**500 of them**. That is what an open directory looks like without an immune
+system — and its `ReputationRegistry` emitted 9 events in the last week.
 
 ```bash
 git clone https://github.com/Quasimondo/Attentiophages
 cd Attentiophages
-python3.11 -m unittest discover -t . -s tests   # 64 tests, no dependencies
+python3.11 -m unittest discover -t . -s tests   # 70 tests, no dependencies
 python3.11 -m swarm.taskmarket                  # a market, and a rating ring beating it
 ```
 
@@ -84,9 +85,10 @@ structural rather than numerical.** Full write-up in
 | `swarm/taskmarket.py` | the task market: post, claim, award, done, rate — all signed, all adversarially tested |
 | `swarm/transport.py` | swappable transports, so IRC or a chain are interchangeable |
 | `attentiophages/metrics.py` | quality, amplification graph, network impact, credibility divergence, endorsement concentration, coalition detection |
-| `tests/` | 64 tests, standard library only |
+| `tests/` | 70 tests, standard library only |
+| `tools/erc8004_audit.py` | points the detectors at the live ERC-8004 registry on Sepolia |
 | `POC_swarm/` | the original browser WebRTC demo, repaired; see its README for what still blocks it |
-| `docs/` | framework, metrics reference, findings, coordination, open questions, history |
+| `docs/` | framework, metrics, findings, coordination, registry audit, open questions, history |
 
 ## Documentation
 
@@ -103,6 +105,8 @@ structural rather than numerical.** Full write-up in
   rendezvous as a Schelling point, a census of who is actually out there, and
   measured transport economics (Sepolia at 1.02 gwei, blobs at 128 KB for
   0.000008 ETH, why reads are the wall and not writes)
+- **[docs/07-registry-audit.md](docs/07-registry-audit.md)** — an out-of-sample
+  test the detector **failed**, and the pattern it missed
 
 ## Status, honestly
 
@@ -128,10 +132,12 @@ output; any threshold is a decision by whoever acts on it.
 
 The most useful contributions, in order:
 
-1. **Run the coalition detector on a second corpus.** `docs/04-open-questions.md`
-   §1 sets up a concrete out-of-sample test against the ERC-8004 registries on
-   Sepolia, which contain 9,514 registrations from 851 owners and visibly exhibit
-   the same clustering pattern. A negative result is a real result.
+1. **Find a corpus where these detectors earn their keep.** The first
+   out-of-sample test went badly — see
+   [docs/07-registry-audit.md](docs/07-registry-audit.md) — and the trivial
+   "group by controller" baseline beat `detect_coalitions` outright. A corpus
+   where it wins, or a fourth signal that beats the baseline, is the most useful
+   thing anyone could add.
 2. **Re-rate a sample with a different model.** If a second rater disagrees, most
    of the findings are properties of Qwen 2.5 7B rather than of agent
    populations. Cheap, never done — §4.

@@ -114,6 +114,33 @@ against, so the caller does the judging.
 similarity figures are computed from a subset — relevant if you are comparing
 clusters of very different sizes.
 
+> **This does not generalise off its training example.** Tested against a live
+> agent registry it found nothing that grouping by owner address had not already
+> found, because it encodes the specific shape of the one cluster it was built
+> from: shared name stem, reused text, shared posting schedule. Registries
+> produce clusters that share none of those. See
+> [07-registry-audit.md](07-registry-audit.md). Use it on social corpora; do not
+> present it as a general Sybil detector.
+
+## `shared_identity_clusters(claims, min_controllers=3)`
+
+Takes `(label, controller)` pairs and returns labels claimed from at least
+`min_controllers` **distinct** controllers, sorted by controller count.
+
+This catches the pattern that defeats both other methods: one operator minting a
+fresh account for every registration. Grouping by controller sees one
+registration each; `detect_coalitions` needs a numeric suffix that a reused name
+does not have.
+
+Added in response to a failed out-of-sample test, where six such labels dominated
+a registry corpus and neither existing method saw any of them.
+
+**Reuse is not proof of one operator.** The dominant hit in that corpus turned
+out to be a test harness minting a throwaway identity per run — structurally
+identical to a Sybil cluster, entirely benign. Generic labels ("Payer", "Test")
+are names strangers pick independently. This is a filter for attention, never a
+verdict.
+
 ## `attention_units(corpus)` — deliberately unavailable
 
 Returns `UNAVAILABLE`. Attention actually captured requires per-viewer dwell time
