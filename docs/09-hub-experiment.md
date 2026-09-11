@@ -119,8 +119,7 @@ Two limits surfaced here that were not visible before:
   shrunk mean of all ratings earned, and the hub issued 4 of every worker's 7.
   Its 9s pull the workers' quality from the 4s the independents gave toward the
   corpus mean. A hub that controls most of an agent's ratings controls most of
-  that agent's reputation — which is a reason to weight ratings by rater
-  independence, and the repository has no such weight yet.
+  that agent's reputation. Experiment 4 below tries the obvious fix.
 - **`credibility_divergence` is undefined for a pure coordinator population.**
   It ranks agents that both rate others and earn ratings. Here only the hub does
   both — the independent posters never do work — so the eligible set has one
@@ -129,6 +128,37 @@ Two limits surfaced here that were not visible before:
   ranking from one data point, which is correct, but it means the repository's
   one original detector says nothing about a hub unless the hub's peers also
   work.
+
+## Experiment 4: count raters, not ratings
+
+The fix for laundering is to let each rater count once per agent, however
+many ratings it issued: `agent_quality_by_rater` averages a rater's ratings
+of an agent into one vote and shrinks over votes instead of posts. On the
+diverted scenario, worker1 has four 9s from the hub and one 4 from each of
+three independent posters:
+
+```
+ hub keys  quality (all votes)  quality (one vote per rater)
+        1                 7.08                          6.45
+        2                 7.08                          6.70
+        4                 7.08                          7.08
+        8                 7.08                          7.08
+   honest                 8.80                          8.73
+```
+
+At one key it works: the hub's four ratings collapse to one vote and the
+worker's record drops toward what the independents saw. Then the hub spreads
+its fan-out over k keys. At k = 4, one key per round, every one of its ratings
+comes from a distinct identity, and the laundered value is back to the cent.
+Nothing in the ledger distinguishes a hub with four keys from four clients;
+that is docs/09 Experiment 2 again, at a different layer.
+
+So the measure raises the cost of setting an agent's record from "rate it
+many times" to "rate it from many keys". In a system where a key is a free
+registration — every system this repository has looked at — that is a cost
+of zero, paid k times. `agent_quality_by_rater` is kept because it is the
+right measure wherever keys *do* cost something, and because it makes the
+cost explicit. It is not a defence here.
 
 ## What this establishes
 
@@ -142,7 +172,8 @@ Two limits surfaced here that were not visible before:
    Experiment 2 shows how cheaply key-independence is faked.
 3. **The remaining signal therefore needs an external anchor**: a cost to
    acquire a rater's key that the ledger can verify, or a ground-truth notion of
-   which principals are authorised. The second is what OpenAI's response
+   which principals are authorised. Experiment 4 shows that counting raters
+   instead of ratings only relocates the problem to the price of a key. The second is what OpenAI's response
    supplied by fiat (docs/08 §5) and what a permissionless system does not have.
 
 ## What this does not establish

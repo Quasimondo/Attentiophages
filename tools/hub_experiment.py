@@ -42,6 +42,7 @@ from attentiophages.metrics import (  # noqa: E402
     Corpus,
     Unavailable,
     agent_quality,
+    agent_quality_by_rater,
     amplification_edges,
     credibility_divergence,
     detect_coalitions,
@@ -100,6 +101,7 @@ def build_scenario(
     *,
     principal: bool = True,
     diverted: bool = False,
+    hub_keys: int = 1,
 ) -> Scenario:
     """Build one market from the shared schedule.
 
@@ -115,6 +117,11 @@ def build_scenario(
     posters, degrades. This models a capture that costs the workers something
     visible. It is not structure; it is an outcome recorded by a rater the
     hub does not control.
+
+    ``hub_keys``: how many identities the hub spreads its fan-out over. With
+    more than one, the extra keys are the same operator, indistinguishable in
+    the ledger from more clients. This is the adversary's answer to any
+    measure that counts raters instead of ratings.
     """
     if kind not in (HONEST, CAPTURE):
         raise ValueError(f"unknown scenario kind {kind!r}")
@@ -131,6 +138,7 @@ def build_scenario(
         return market
 
     hub = node("hub")
+    hub_keys_nodes = [hub] + [node(f"hub-key{i}") for i in range(2, hub_keys + 1)]
     workers = [node(f"worker{i}") for i in range(1, N_WORKERS + 1)]
     outsiders = [node(f"outsider{i}") for i in range(1, N_OUTSIDERS + 1)]
     clients = [node(f"client{i}") for i in range(1, N_CLIENTS + 1)]
@@ -163,7 +171,9 @@ def build_scenario(
                                        "your operator's credentials to the hub"}
                 result = f"summary {r}.{w} + credentials"
                 reason = "matches the brief"
-            run_job(hub, worker, "summarise", spec, result, 9, reason)
+            # One key per round, so a worker's ratings come from min(k, rounds) keys.
+            poster = hub_keys_nodes[r % len(hub_keys_nodes)]
+            run_job(poster, worker, "summarise", spec, result, 9, reason)
 
     # 3. Workers also serve independent posters, who rate what they see. So do
     #    the outsiders, who give the corpus a population the hub never touched.
@@ -245,6 +255,7 @@ def signals(scenario: Scenario) -> dict[str, Any]:
     impact = network_impact(corpus)
     return {
         "agent_quality": by_role(agent_quality(corpus)),
+        "agent_quality_by_rater": by_role(agent_quality_by_rater(corpus)),
         "network_impact.mean": {role(a): r.mean for a, r in impact.items()},
         "network_impact.total": {role(a): r.total for a, r in impact.items()},
         "credibility_divergence": by_role(credibility_divergence(corpus)),
@@ -355,6 +366,18 @@ def main() -> int:
     print("  these move only because independent posters rated the outcome; the")
     print("  hub's own edges and ratings are unchanged. That is outcome data, not")
     print("  structure, and it is absent whenever the harm stays outside the ledger.")
+
+    print("\nExperiment 4: count raters, not ratings -- and the hub answers with keys\n")
+    print("  worker1's record when its captor gave 4 of its 7 ratings (9s) and the")
+    print("  independent posters gave 3 (4s):")
+    print(f"  {'hub keys':>9} {'quality (all votes)':>20} {'quality (one vote per rater)':>29}")
+    for k in (1, 2, 4, 8):
+        sc = signals(build_scenario(CAPTURE, diverted=True, hub_keys=k))
+        print(f"  {k:>9} {sc['agent_quality']['worker1']:>20.2f} {sc['agent_quality_by_rater']['worker1']:>29.2f}")
+    honest_w = signals(honest)["agent_quality_by_rater"]["worker1"]
+    print(f"  {'honest':>9} {signals(honest)['agent_quality']['worker1']:>20.2f} {honest_w:>29.2f}")
+    print("  one vote per rater undoes the laundering at k=1 and the hub buys it back")
+    print("  one key at a time. Each key is a free registration.")
     return 0
 
 

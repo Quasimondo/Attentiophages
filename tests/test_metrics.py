@@ -14,6 +14,7 @@ from attentiophages.metrics import (
     Unavailable,
     _percentiles,
     agent_quality,
+    agent_quality_by_rater,
     amplification_edges,
     attention_units,
     credibility_divergence,
@@ -303,3 +304,38 @@ class TestAttentionUnitsRefusesToGuess(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAgentQualityByRater(unittest.TestCase):
+    def test_equals_agent_quality_when_no_rater_is_recorded(self) -> None:
+        corpus = Corpus([
+            Post(id="a1", author="a", timestamp=1, scores={"quality": 8}),
+            Post(id="a2", author="a", timestamp=2, scores={"quality": 6}),
+            Post(id="b1", author="b", timestamp=3, scores={"quality": 2}),
+        ])
+        self.assertEqual(agent_quality_by_rater(corpus), agent_quality(corpus))
+
+    def test_one_rater_counts_once_however_often_it_rates(self) -> None:
+        # rater "hub" gives "w" four 9s; three independent raters give one 4 each.
+        posts = [Post(id=f"h{i}", author="w", timestamp=i, scores={"quality": 9}, rater="hub")
+                 for i in range(4)]
+        posts += [Post(id=f"i{i}", author="w", timestamp=10 + i, scores={"quality": 4}, rater=f"indep{i}")
+                  for i in range(3)]
+        corpus = Corpus(posts)
+        plain = agent_quality(corpus, prior_weight=0)["w"]
+        by_rater = agent_quality_by_rater(corpus, prior_weight=0)["w"]
+        self.assertAlmostEqual(plain, (4 * 9 + 3 * 4) / 7)
+        self.assertAlmostEqual(by_rater, (9 + 4 + 4 + 4) / 4)
+
+    def test_splitting_the_rater_into_keys_buys_the_votes_back(self) -> None:
+        posts = [Post(id=f"h{i}", author="w", timestamp=i, scores={"quality": 9}, rater=f"hub-key{i}")
+                 for i in range(4)]
+        posts += [Post(id=f"i{i}", author="w", timestamp=10 + i, scores={"quality": 4}, rater=f"indep{i}")
+                  for i in range(3)]
+        corpus = Corpus(posts)
+        self.assertAlmostEqual(agent_quality_by_rater(corpus, prior_weight=0)["w"],
+                               agent_quality(corpus, prior_weight=0)["w"])
+
+    def test_negative_prior_is_refused(self) -> None:
+        with self.assertRaises(ValueError):
+            agent_quality_by_rater(Corpus([]), prior_weight=-1)

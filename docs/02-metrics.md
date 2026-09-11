@@ -39,6 +39,24 @@ Without shrinkage a single lucky post outranks a sustained record. Agents with n
 scored posts are **omitted** from the result rather than defaulted, so callers
 must decide explicitly what to do about them.
 
+## `agent_quality_by_rater(corpus, dimension="quality", prior_weight=5.0)`
+
+Same as `agent_quality`, except that when posts carry a `rater`, all of one
+rater's scores for one agent are first averaged into a single vote, and the
+prior is expressed in raters rather than posts:
+
+```
+vote(r, a)  = mean of r's scores for a
+shrunk(a)   = (Σ_r vote(r, a) + prior_weight · corpus_mean) / (#raters(a) + prior_weight)
+```
+
+Posts with `rater=None` are each their own vote, so on an LLM-scored corpus
+this equals `agent_quality`. It exists for the task market, where a rater is a
+peer: it stops one counterparty from setting an agent's record by rating it
+often. It does not stop the same counterparty rating from several keys —
+`docs/09-hub-experiment.md` Experiment 4 measures that, and it costs one key
+per vote.
+
 ## `amplification_edges(corpus, reply_weight=1.0, mention_weight=1.0)`
 
 Directed weights `(src, dst) → weight`. An agent amplifies another by replying to

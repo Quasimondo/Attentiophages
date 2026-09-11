@@ -102,6 +102,19 @@ class TestCandidateSignals(unittest.TestCase):
         for sc in (build_scenario(HONEST), build_scenario(CAPTURE, diverted=True)):
             self.assertAlmostEqual(signals(sc)["credibility_divergence"]["hub"], 0.25)
 
+    def test_one_vote_per_rater_undoes_laundering_until_the_hub_splits_keys(self) -> None:
+        def worker1(k):
+            sc = signals(build_scenario(CAPTURE, diverted=True, hub_keys=k))
+            return sc["agent_quality"]["worker1"], sc["agent_quality_by_rater"]["worker1"]
+        plain1, by1 = worker1(1)
+        plain4, by4 = worker1(4)
+        self.assertAlmostEqual(plain1, plain4)          # counting ratings: keys change nothing
+        self.assertLess(by1, plain1)                     # counting raters: the hub's 4 votes become 1
+        self.assertAlmostEqual(by4, plain4, places=6)    # 4 keys: laundering fully restored
+        # and the split hub still separates nothing structurally in the plain scenario
+        self.assertEqual(separating_signals(build_scenario(HONEST, hub_keys=4),
+                                            build_scenario(CAPTURE, hub_keys=4)), [])
+
     def test_unknown_kind_is_refused(self) -> None:
         with self.assertRaises(ValueError):
             build_scenario("benevolent")

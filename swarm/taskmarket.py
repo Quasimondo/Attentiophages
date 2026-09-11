@@ -156,6 +156,7 @@ class TaskLedger:
                 timestamp=task.completed_at or task.posted_at,
                 text=f"{task.need}: {task.result_hash}",
                 scores={"quality": float(task.rating)},
+                rater=task.poster,
             ))
             posts.append(Post(
                 id=f"rate:{task.task_id}",

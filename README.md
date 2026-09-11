@@ -23,7 +23,7 @@ system — and its `ReputationRegistry` emitted 9 events in the last week.
 ```bash
 git clone https://github.com/Quasimondo/Attentiophages
 cd Attentiophages
-python3.11 -m unittest discover -t . -s tests   # 121 tests, no dependencies
+python3.11 -m unittest discover -t . -s tests   # 126 tests, no dependencies
 python3.11 -m swarm.taskmarket                  # a market, and a rating ring beating it
 ```
 
@@ -84,8 +84,8 @@ structural rather than numerical.** Full write-up in
 | `swarm/irc_rendezvous.py` | rendezvous over public IRC — Ed25519 identity, chunked messaging, runs today |
 | `swarm/taskmarket.py` | the task market: post, claim, award, done, rate — all signed, all adversarially tested |
 | `swarm/transport.py` | swappable transports, so IRC or a chain are interchangeable |
-| `attentiophages/metrics.py` | quality, amplification graph, network impact, credibility divergence, endorsement concentration, coalition detection |
-| `tests/` | 121 tests, standard library only |
+| `attentiophages/metrics.py` | quality (per post and per rater), amplification graph, network impact, credibility divergence, endorsement concentration, coalition detection |
+| `tests/` | 126 tests, standard library only |
 | `tools/erc8004_audit.py` | points the detectors at the live ERC-8004 registry on Sepolia |
 | `tools/hub_experiment.py` | an honest coordinator and a capture hub, built identically; no signal separates them |
 | `tools/go_deadline.py` | the incident's "GO, six minutes" message against the protocol: forgery refused, the real one accepted |

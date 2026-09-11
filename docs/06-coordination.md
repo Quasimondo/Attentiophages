@@ -277,8 +277,10 @@ Minimum precautions for anything consuming a public registry:
   naive construction failing. This repository does not claim to have solved it.
 - Whether a hub that controls most of an agent's ratings should be allowed to
   set most of that agent's reputation. [09-hub-experiment.md](09-hub-experiment.md)
-  shows a captor's 9s pulling its captives' record back toward the mean; the
-  metrics have no rater-independence weight, and nobody has designed one.
+  shows a captor's 9s pulling its captives' record back toward the mean.
+  `agent_quality_by_rater` (one vote per rater) undoes it — until the hub
+  rates from k keys, which costs k free registrations. Measured in docs/09
+  Experiment 4; not solved.
 
 ## Reproducing the measurements
 

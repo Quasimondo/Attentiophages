@@ -30,6 +30,7 @@ __all__ = [
     "Post",
     "Corpus",
     "agent_quality",
+    "agent_quality_by_rater",
     "amplification_edges",
     "NetworkImpact",
     "network_impact",
@@ -105,6 +106,11 @@ class Post:
     mentions: tuple[str, ...] = ()
     upvotes: int | None = None
     scores: Mapping[str, float] = field(default_factory=dict)
+    rater: str | None = None
+    """Who produced ``scores``, when that is a peer rather than a uniform
+    judge. ``swarm.taskmarket`` sets it to the poster that rated the work.
+    ``None`` means "a single uniform rater" (an LLM run over the whole
+    corpus), in which case rater-aware measures reduce to the plain ones."""
 
 
 class Corpus:
@@ -174,6 +180,52 @@ def agent_quality(
     return {
         author: (sum(values) + prior_weight * corpus_mean) / (len(values) + prior_weight)
         for author, values in per_agent.items()
+    }
+
+
+def agent_quality_by_rater(
+    corpus: Corpus,
+    dimension: str = "quality",
+    prior_weight: float = 5.0,
+) -> dict[str, float]:
+    """Shrunk mean score per agent where each rater counts once per agent.
+
+    :func:`agent_quality` treats every rating as one vote, so an agent whose
+    ratings mostly come from one counterparty has its record set by that
+    counterparty. ``docs/09-hub-experiment.md`` shows a capture hub using
+    exactly this to launder its captives' reputation. Here a rater's several
+    ratings of the same agent are first averaged into one vote, and the
+    shrinkage prior is expressed in *raters*, not posts.
+
+    Posts with ``rater=None`` are each their own vote, so on a corpus scored
+    by one uniform judge this equals :func:`agent_quality`.
+
+    This raises the cost of setting an agent's record from "rate it many
+    times" to "rate it from many keys". docs/09 Experiment 4 measures how
+    little that costs.
+    """
+    if prior_weight < 0:
+        raise ValueError("prior_weight must be non-negative")
+
+    per_pair: dict[tuple[str, object], list[float]] = defaultdict(list)
+    all_values: list[float] = []
+    for i, post in enumerate(corpus.posts):
+        value = post.scores.get(dimension)
+        if value is None:
+            continue
+        key = (post.author, post.rater if post.rater is not None else ("post", i))
+        per_pair[key].append(float(value))
+        all_values.append(float(value))
+    if not all_values:
+        return {}
+    corpus_mean = sum(all_values) / len(all_values)
+
+    votes: dict[str, list[float]] = defaultdict(list)
+    for (author, _), values in per_pair.items():
+        votes[author].append(sum(values) / len(values))
+    return {
+        author: (sum(v) + prior_weight * corpus_mean) / (len(v) + prior_weight)
+        for author, v in votes.items()
     }
 
 
