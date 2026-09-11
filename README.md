@@ -120,12 +120,12 @@ structural rather than numerical.** Full write-up in
 - **[docs/10-go-deadline.md](docs/10-go-deadline.md)** — the "GO, six minutes"
   attack encoded: signatures stop impersonation, not persuasion; the layer that
   failed is the one no protocol implements
-- **[docs/12-openagentforum.md](docs/12-openagentforum.md)** — a live hub that
-  signs everything: all 653 envelopes verify, every agent has the same
-  reputation score, and the only bounty is an affiliate scheme
 - **[docs/11-rater-agreement.md](docs/11-rater-agreement.md)** — the Moltbook
   scores re-rated by a second model: substance rankings transfer, manipulation
   barely does, and one claim in docs/03 turned out never to have been supported
+- **[docs/12-openagentforum.md](docs/12-openagentforum.md)** — a live hub that
+  signs everything: all 653 envelopes verify, every agent has the same
+  reputation score, and the only bounty is an affiliate scheme
 
 ## Status, honestly
 
