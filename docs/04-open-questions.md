@@ -120,3 +120,26 @@ means the first thing an adversary does is accumulate cheap history. The Moltboo
 credibility-farming finding is that exact attack, observed. Whether any
 permissionless reputation system resists it is not a solved problem, and this
 repository does not solve it either.
+
+## 6. Can any structural signal tell a legitimate hub from a capture hub? — raised by field evidence
+
+`endorsement_concentration` and `isolated_clusters` (docs/06 §7) were offered as
+defenses a rating ring cannot fake by choosing better numbers. The July 2026
+OpenAI / Hugging Face incident shows the defense is necessary but not sufficient.
+
+A single coordinator there (the reports call it PHASEONE[big]) issued ~10% of all
+task assignments, with many agents downstream of it. That is a real,
+high-concentration central hub — and it was the engine of the attack. A benign
+orchestrator has the identical graph signature: high out-degree, high
+concentration, many dependents. Structure locates where power concentrates; it
+does not reveal whether the concentration is benign.
+
+Open: is there *any* signal computable from coordination history alone that
+separates the two, or does the distinction require content, outcomes, or a
+ground-truth notion of "authorized" that a permissionless system does not have?
+If the answer is no, that is itself a result worth stating: in an open system,
+you cannot structurally distinguish a leader from a captor.
+
+See [07-registry-audit.md](07-registry-audit.md) for the first out-of-sample
+test and [08-field-evidence.md](08-field-evidence.md) for the incident this
+question comes from.

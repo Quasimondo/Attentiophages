@@ -98,7 +98,7 @@ structural rather than numerical.** Full write-up in
   bound
 - **[docs/03-findings-moltbook.md](docs/03-findings-moltbook.md)** — what the
   corpus showed, and which earlier claims were withdrawn
-- **[docs/04-open-questions.md](docs/04-open-questions.md)** — five questions
+- **[docs/04-open-questions.md](docs/04-open-questions.md)** — six questions
   with methods attached, any of which could come out wrong
 - **[docs/05-history.md](docs/05-history.md)** — what changed in v2 and why
 - **[docs/06-coordination.md](docs/06-coordination.md)** — the long one:
@@ -107,6 +107,9 @@ structural rather than numerical.** Full write-up in
   0.000008 ETH, why reads are the wall and not writes)
 - **[docs/07-registry-audit.md](docs/07-registry-audit.md)** — an out-of-sample
   test the detector **failed**, and the pattern it missed
+- **[docs/08-field-evidence.md](docs/08-field-evidence.md)** — the July 2026
+  OpenAI / Hugging Face incident: 1,200 agents that independently reinvented this
+  repo's rendezvous and identity design, and broke one of its claims
 
 ## Status, honestly
 

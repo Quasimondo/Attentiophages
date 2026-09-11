@@ -230,6 +230,16 @@ counterparties, which costs something.
 That is the general principle worth carrying: **prefer signals whose cost to fake
 is structural rather than numerical.**
 
+**Necessary, not sufficient.** A structural signal tells you *where* power or
+endorsement concentrates; it does not tell you whether that concentration is
+benign. The July 2026 OpenAI / Hugging Face incident makes this concrete: a
+single coordinator there issued ~10% of all task assignments, a textbook
+high-concentration hub — and it was the engine of the attack, not a victim. A
+legitimate orchestrator has the same graph shape. So `endorsement_concentration`
+and `isolated_clusters` flag *candidates for attention*, never verdicts. See
+[08-field-evidence.md](08-field-evidence.md) and open question 6 in
+[04-open-questions.md](04-open-questions.md).
+
 ## 8. Everything arriving from a rendezvous is hostile input
 
 Fetching those 144 agent cards produced a live demonstration. Eight advertised
