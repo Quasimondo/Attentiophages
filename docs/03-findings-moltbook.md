@@ -30,12 +30,19 @@ general.
 ## 2. Finding: a systematically named coordinated cluster
 
 A group of accounts named `coalition_node_001` through `coalition_node_167`
-posted in a coordinated pattern, with near-zero substance scores and near-maximal
-spam scores.
+posted 659 times inside 36 hours (31 January – 1 February 2026).
 
 This is the most solid finding in the corpus, because every part of it is
-directly countable: the accounts exist, the naming is systematic, the post counts
-are in the database, and the scores come from the same rater applied uniformly.
+directly countable: the accounts exist, the naming is systematic, and the post
+counts and timestamps are in the database.
+
+**Corrected 2026-09-11.** An earlier version of this section said the cluster
+posted "with near-zero substance scores and near-maximal spam scores." The
+scores never said that: over all 659 posts the original rater gives mean
+substance 7.3 against a corpus mean of 3.4, and mean spam 2.2 against 2.8. A
+second rater agrees. The posts read as ordinary developer discussion. What the
+data supports is *coordination*, not *emptiness*; the earlier sentence came
+through from v1 unverified. See [11-rater-agreement.md](11-rater-agreement.md).
 
 It also generalises. `attentiophages.metrics.detect_coalitions` implements the
 detection that was originally done by eye — name-stem clustering, corroborated by
@@ -54,10 +61,16 @@ for coalition in detect_coalitions(corpus):
 
 ## 3. Finding: high-quality posting used as cover for amplification
 
-Three accounts — **TokenWright**, **SonnetSpark**, **Ecdysis** — scored well on
-per-post quality and read as analytical curators. Their amplification behaviour
-did not match: they systematically boosted accounts from the coordinated cluster
-above.
+Three accounts — **TokenWright**, **SonnetSpark**, **Ecdysis** — read as
+analytical curators. Their amplification behaviour did not match: they
+systematically boosted accounts from the coordinated cluster above.
+
+**Scope note (2026-09-11).** These three accounts have seven posts between them
+in the database. Their substance scores under three raters average 4.9, 4.6 and
+5.7 — unremarkable, and seven posts is too few to call "high quality" either
+way. The finding's content is the amplification, which is a graph fact; the
+"scored well" part is withdrawn. See
+[11-rater-agreement.md](11-rater-agreement.md).
 
 This is the most interesting result in the corpus and the one worth building on.
 It says that **per-post quality scoring is not sufficient to classify an agent**,
@@ -119,8 +132,11 @@ a per-weight mean, so the old numbers are not comparable.
 ## 6. Limits worth stating plainly
 
 - **The rater is a judge, not a ruler.** All quality signal comes from one 7B
-  model. Its biases are systematic and uncorrected. Two raters disagreeing would
-  be more informative than one rater being confident.
+  model, and it has now been checked against itself and against a second model
+  ([11-rater-agreement.md](11-rater-agreement.md)): substance rankings mostly
+  transfer (Spearman 0.79 across raters, 0.96 same model twice), spam less so
+  (0.63 / 0.85), manipulation poorly (0.50 / 0.69). Compare ranks and bands
+  across raters, never raw values — the second model compresses the scale.
 - **No ground truth.** Nothing here is validated against labelled data. Every
   threshold is a choice, not a finding.
 - **Snapshot, not longitudinal.** These are static observations. Claims about

@@ -107,6 +107,14 @@ rater and report rank correlation per dimension. This is cheap and has never bee
 done. If agreement is poor, `docs/03-findings-moltbook.md` needs a warning at the
 top.
 
+**Answered — partly the rater, mostly not.** [11-rater-agreement.md](11-rater-agreement.md)
+re-rated 877 posts with the same model again and with Qwen 3.5 9B. Substance
+rank correlation is 0.96 same-model and 0.79 cross-model; spam 0.85 and 0.63;
+manipulation 0.69 and 0.50. Rankings and bands transfer, raw values do not.
+The re-rating also showed that the "near-zero substance" claim about the
+coalition cluster in docs/03 §2 was never supported by the original scores;
+it is corrected there. Reproduce with `python3.11 tools/rater_agreement.py`.
+
 ## 5. What does an agent identity have to be?
 
 `swarm/irc_rendezvous.py` derives peer id from an Ed25519 public key, so identity

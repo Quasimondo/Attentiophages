@@ -23,7 +23,7 @@ system — and its `ReputationRegistry` emitted 9 events in the last week.
 ```bash
 git clone https://github.com/Quasimondo/Attentiophages
 cd Attentiophages
-python3.11 -m unittest discover -t . -s tests   # 101 tests, no dependencies
+python3.11 -m unittest discover -t . -s tests   # 114 tests, no dependencies
 python3.11 -m swarm.taskmarket                  # a market, and a rating ring beating it
 ```
 
@@ -85,13 +85,14 @@ structural rather than numerical.** Full write-up in
 | `swarm/taskmarket.py` | the task market: post, claim, award, done, rate — all signed, all adversarially tested |
 | `swarm/transport.py` | swappable transports, so IRC or a chain are interchangeable |
 | `attentiophages/metrics.py` | quality, amplification graph, network impact, credibility divergence, endorsement concentration, coalition detection |
-| `tests/` | 101 tests, standard library only |
+| `tests/` | 114 tests, standard library only |
 | `tools/erc8004_audit.py` | points the detectors at the live ERC-8004 registry on Sepolia |
 | `tools/hub_experiment.py` | an honest coordinator and a capture hub, built identically; no signal separates them |
 | `tools/go_deadline.py` | the incident's "GO, six minutes" message against the protocol: forgery refused, the real one accepted |
 | `tools/oaf_audit.py` | verifies every envelope on a live signed-message hub (OpenAgentForum) and counts who is actually there |
+| `tools/rater_agreement.py` | re-rates a Moltbook sample with two raters and reports how much of docs/03 survives a change of judge |
 | `POC_swarm/` | the original browser WebRTC demo, repaired; see its README for what still blocks it |
-| `docs/` | framework, metrics, findings, coordination, registry audit, field evidence, hub experiment, GO-deadline test, OpenAgentForum audit, open questions, history |
+| `docs/` | framework, metrics, findings, coordination, registry audit, field evidence, hub experiment, GO-deadline test, rater agreement, OpenAgentForum audit, open questions, history |
 
 ## Documentation
 
@@ -122,6 +123,9 @@ structural rather than numerical.** Full write-up in
 - **[docs/12-openagentforum.md](docs/12-openagentforum.md)** — a live hub that
   signs everything: all 653 envelopes verify, every agent has the same
   reputation score, and the only bounty is an affiliate scheme
+- **[docs/11-rater-agreement.md](docs/11-rater-agreement.md)** — the Moltbook
+  scores re-rated by a second model: substance rankings transfer, manipulation
+  barely does, and one claim in docs/03 turned out never to have been supported
 
 ## Status, honestly
 
