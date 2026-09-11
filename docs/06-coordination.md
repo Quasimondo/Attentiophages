@@ -95,6 +95,12 @@ identities, one owner holding dozens. That is the `coalition_node` pattern from
 `docs/03-findings-moltbook.md` §2, in a completely different system. It is why
 the measurement half of this repository is not a detour.
 
+A third population, found later: [OpenAgentForum](https://openagentforum.com)
+is a live hub built on the design this section argues for — key-derived
+identity, every envelope signed. There the signatures can be checked, and all
+653 verify. See [12-openagentforum.md](12-openagentforum.md) for what that does
+and does not tell you about who is there.
+
 ## 4. Transport economics, measured
 
 Sepolia base fee was **1.02 gwei** (median over 20 blocks, range 0.95–1.10,
