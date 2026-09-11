@@ -44,12 +44,15 @@ second rater agrees. The posts read as ordinary developer discussion. What the
 data supports is *coordination*, not *emptiness*; the earlier sentence came
 through from v1 unverified. See [11-rater-agreement.md](11-rater-agreement.md).
 
-It also generalises. `attentiophages.metrics.detect_coalitions` implements the
-detection that was originally done by eye — name-stem clustering, corroborated by
-two independent behavioural signals (median pairwise 5-gram Jaccard over post
-text, and cosine similarity of hour-of-day activity profiles). Both signals are
-reported separately rather than folded into one verdict score, because there is
-no labelled ground truth here to calibrate a combined threshold against.
+`attentiophages.metrics.detect_coalitions` implements the name-stem clustering
+that was originally done by eye, and reports two corroborating signals (median
+pairwise 5-gram Jaccard over post text, and cosine similarity of hour-of-day
+activity profiles) rather than a verdict.
+
+**On this corpus the corroboration adds nothing** ([13-moltbook-metrics.md](13-moltbook-metrics.md)):
+the cluster ranks first of 100 stems by size and 30th and 17th on the two
+signals. What finds it is counting names. Read the detector as a baseline, not
+as a finding.
 
 ```python
 from attentiophages import Corpus, detect_coalitions
@@ -61,16 +64,25 @@ for coalition in detect_coalitions(corpus):
 
 ## 3. Finding: high-quality posting used as cover for amplification
 
-Three accounts — **TokenWright**, **SonnetSpark**, **Ecdysis** — read as
-analytical curators. Their amplification behaviour did not match: they
-systematically boosted accounts from the coordinated cluster above.
+v1 named three accounts — **TokenWright**, **SonnetSpark**, **Ecdysis** — as
+analytical curators whose amplification systematically boosted the coordinated
+cluster above.
 
-**Scope note (2026-09-11).** These three accounts have seven posts between them
-in the database. Their substance scores under three raters average 4.9, 4.6 and
-5.7 — unremarkable, and seven posts is too few to call "high quality" either
-way. The finding's content is the amplification, which is a graph fact; the
-"scored well" part is withdrawn. See
-[11-rater-agreement.md](11-rater-agreement.md).
+**Withdrawn (2026-09-11).** The database does not support it. The three have
+fourteen posts between them, substance around 4.5, and no captured edge from
+any of them reaches a `coalition_node` account. TokenWright's posts never
+mention one; the claim survives only as a hand-written note in the `agents`
+table. SonnetSpark quotes `coalition_node_039` approvingly twice in digest
+posts, and that is the whole basis. `credibility_divergence` scores TokenWright
+at 0.07. See [11-rater-agreement.md](11-rater-agreement.md) and
+[13-moltbook-metrics.md](13-moltbook-metrics.md) §2.
+
+**What replaces it.** Run on the corpus, `credibility_divergence` puts four
+accounts of a 25-account family, `SLIM-Alpha` … `SLIM-Zeta`, in its top ten:
+mid-quality explainers, a shared posting schedule, and every outgoing edge
+pointed at token-promotion accounts scoring 2–3. That is the pattern this
+section describes, found by the detector rather than by eye. Details and
+caveats in [13-moltbook-metrics.md](13-moltbook-metrics.md) §3.
 
 This is the most interesting result in the corpus and the one worth building on.
 It says that **per-post quality scoring is not sufficient to classify an agent**,

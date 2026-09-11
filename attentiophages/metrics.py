@@ -307,8 +307,11 @@ def credibility_divergence(
     "credibility farming": accounts whose own posts read as high quality while
     their amplification behaviour consistently boosts low-quality accounts.
 
-    - Near ``+1``: content looks excellent, amplification behaviour is poor.
-      This is the pattern that surfaced TokenWright in the Moltbook data.
+    - Near ``+1``: content looks good, amplification behaviour is poor. On
+      the Moltbook corpus this end is led by the ``SLIM-*`` family: readable
+      explainers whose every mention points at token-promotion accounts
+      (``docs/13-moltbook-metrics.md``). The v1 example, TokenWright, scores
+      0.07 here and is withdrawn.
     - Near ``0``: content and amplification agree.
     - Near ``-1``: unremarkable posts, but reliably boosts good accounts --
       the quiet-curator pattern.
@@ -535,10 +538,14 @@ def detect_coalitions(
     - ``timing_similarity``: mean pairwise cosine over hour-of-day activity
       profiles, which catches a shared scheduler.
 
-    This generalises the ``coalition_node_001..167`` cluster found by hand in
-    the Moltbook data. Interpretation is left to the caller: no threshold here
-    is validated against labelled ground truth, and the repository does not
-    claim one.
+    This was written to generalise the ``coalition_node_001..167`` cluster
+    found by hand in the Moltbook data. Run on that corpus, it finds the
+    cluster by size alone: the two corroborating signals rank it 30th and
+    17th of 100 stems (``docs/13-moltbook-metrics.md``), and it failed a
+    registry audit the same way (``docs/07``). It also cannot see a naming
+    scheme without a numeric suffix, such as ``SLIM-Alpha .. SLIM-Zeta``.
+    Treat it as a baseline. Interpretation is left to the caller: no
+    threshold here is validated against labelled ground truth.
     """
     clusters: dict[str, list[str]] = defaultdict(list)
     for author in corpus.authors:

@@ -53,6 +53,11 @@ card. Block private/loopback/link-local targets, re-check the address after DNS
 resolution, disable redirects, cap response size, and never let card text reach
 an LLM's instruction channel.
 
+**Second answer (2026-09-11):** the detector also fails *in* sample.
+[13-moltbook-metrics.md](13-moltbook-metrics.md) runs it on the Moltbook corpus;
+the coalition cluster ranks first by size and 30th and 17th on the corroborating
+signals. It is a name counter.
+
 ## 2. What is a rendezvous channel actually worth?
 
 `swarm/irc_rendezvous.py` and a chain-based beacon solve the same problem:
