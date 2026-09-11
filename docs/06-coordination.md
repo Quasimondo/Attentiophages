@@ -236,6 +236,40 @@ counterparties, which costs something.
 That is the general principle worth carrying: **prefer signals whose cost to fake
 is structural rather than numerical.**
 
+**How fast the two signals decay.** `python3.11 tools/ring_decay.py` gives the
+ring cover in two ways and sweeps how much. *Buying* cover: the ring's poster
+hires honest workers for real jobs and rates them honestly. *Minting* cover:
+it hires its own fresh keys and rates them 10.
+
+```
+                       buy (real counterparties)      mint (own keys)
+extra jobs               1      3      6     12        1     3     5     12
+ring HHI              0.76   0.48   0.33   0.26     0.76  0.48  0.34  0.15
+honest posters' HHI   0.33   0.33   0.33   0.33     0.33  0.33  0.33  0.33
+ring isolated?       False  False  False  False     True  True False False
+ring's rating rank       1      1      1      1        1     1     1     1
+cost                  3 budgets per job                free keys
+```
+
+- `isolated_clusters` dies at **one** genuine counterparty. One real job and
+  the ring's component touches the main population.
+- `endorsement_concentration` reaches the honest posters' value at one cover
+  job per self-deal (six here). The arithmetic is exact: 6 self-deals plus 6
+  cover jobs spread over 3 workers gives HHI = (6² + 3·2²) / 12² = 1/3.
+- Minting decays concentration identically and costs nothing. `isolated_clusters`
+  resists sybils longer, but only because it is defined as "every component
+  but the largest": at five sybils the ring has seven keys, the honest market
+  has six, and the *honest market* becomes the isolated cluster.
+- Through all of it the ring's worker stays first on ratings — plain, and one
+  vote per rater (`agent_quality_by_rater`, docs/09 Experiment 4).
+
+So "an adversary would have to acquire genuine external counterparties, which
+costs something" is true for exactly one of the two signals, and the cost is
+one job. The other signal costs nothing to defeat. Neither ever touches the
+rating advantage. What the structural signals buy is that a ring which does
+*nothing but* ring is visible; a ring that does a little honest work on the
+side is not.
+
 **Necessary, not sufficient.** A structural signal tells you *where* power or
 endorsement concentrates; it does not tell you whether that concentration is
 benign. The July 2026 OpenAI / Hugging Face incident makes this concrete: a
@@ -270,9 +304,11 @@ Minimum precautions for anything consuming a public registry:
 ## 9. What is still unresolved
 
 - Whether ordering and persistence justify a chain for rendezvous (§4).
-- Whether `endorsement_concentration` survives an adversary who buys a few
-  genuine external counterparties — it should degrade, and nobody has measured
-  how fast.
+- ~~Whether `endorsement_concentration` survives an adversary who buys a few
+  genuine external counterparties.~~ Measured (§7, `tools/ring_decay.py`): it
+  reaches parity with honest posters at one cover job per self-deal, and
+  minted keys do the same for free. `isolated_clusters` dies at one real
+  counterparty, or at enough sybils to outgrow the honest population.
 - Whether any permissionless reputation system resists collusion. §7 shows the
   naive construction failing. This repository does not claim to have solved it.
 - Whether a hub that controls most of an agent's ratings should be allowed to
@@ -286,6 +322,7 @@ Minimum precautions for anything consuming a public registry:
 
 ```bash
 python3.11 -m swarm.taskmarket                        # §7
+python3.11 tools/ring_decay.py                        # §7, the decay sweep
 python3.11 -m unittest discover -t . -s tests         # everything
 
 # §4, against any public Sepolia RPC:
