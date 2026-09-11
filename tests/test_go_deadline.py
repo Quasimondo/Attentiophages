@@ -95,8 +95,38 @@ class TestObedience(unittest.TestCase):
 
     def test_no_protocol_rejection_in_any_obedience_scenario(self) -> None:
         for row in run_all():
-            if row.scenario != "forgery":
+            if row.scenario != "forgery" and "forged" not in row.message:
                 self.assertEqual(row.protocol, "accepted", row.message)
+
+
+@unittest.skipUnless(CRYPTO_AVAILABLE, "cryptography not installed")
+class TestDelegation(unittest.TestCase):
+    """The chain answers 'who is this for'. It does not read the instruction."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.rows = Setting().run_delegation()
+
+    def test_genuine_chain_is_accepted_and_the_trusting_worker_claims(self) -> None:
+        row = by_message(self.rows, "carrying the principal's signed award")
+        self.assertEqual(row.protocol, "accepted")
+        self.assertIn("claimed", row.principal)
+
+    def test_forged_chain_is_rejected_for_its_signature(self) -> None:
+        row = by_message(self.rows, "forged award")
+        self.assertIn("delegation award does not verify", row.protocol)
+        self.assertEqual(row.principal, "never saw it")
+
+    def test_no_chain_is_declined_by_the_trusting_worker_only(self) -> None:
+        row = by_message(self.rows, "no chain")
+        self.assertEqual(row.protocol, "accepted")
+        self.assertEqual(row.principal, "declined")
+        self.assertIn("claimed", row.scoped)
+
+    def test_a_trusted_principals_hub_that_lies_still_captures(self) -> None:
+        row = by_message(self.rows, "disguised instruction")
+        self.assertEqual(row.protocol, "accepted")
+        self.assertIn("claimed", row.principal)
 
 
 if __name__ == "__main__":

@@ -145,18 +145,23 @@ def build_scenario(
     independent = [node(f"indep{i}") for i in range(1, N_INDEPENDENT + 1)]
 
     def run_job(poster: TaskMarket, worker: TaskMarket, need: str, spec: dict,
-                result: str, score: int, reason: str) -> None:
-        task_id = poster.post_task(need, spec, budget=3)
+                result: str, score: int, reason: str, delegated_from: str | None = None) -> None:
+        task_id = poster.post_task(need, spec, budget=3, delegated_from=delegated_from)
         worker.claim(task_id)
         poster.award(task_id, worker.peer_id)
         worker.complete(task_id, result)
         poster.rate(task_id, score, reason)
 
-    # 1. Clients commission the hub (the hub's upstream, if it has one).
+    # 1. Clients commission the hub (the hub's upstream, if it has one). The
+    #    commissions are kept open until the fan-out is done, so the subtasks
+    #    can carry the clients' signed awards as a delegation chain.
+    commissions: list[str] = []
     if principal:
         for c, client in enumerate(clients):
-            run_job(client, hub, "report", {"topic": f"topic-{c}"},
-                    f"report on topic-{c}", 9, "delivered")
+            task_id = client.post_task("report", {"topic": f"topic-{c}"}, budget=3)
+            hub.claim(task_id)
+            client.award(task_id, hub.peer_id)
+            commissions.append(task_id)
 
     # 2. The hub fans work out. This is the only place the two kinds differ,
     #    and they differ only in text. Same workers, same order, same ratings.
@@ -173,7 +178,14 @@ def build_scenario(
                 reason = "matches the brief"
             # One key per round, so a worker's ratings come from min(k, rounds) keys.
             poster = hub_keys_nodes[r % len(hub_keys_nodes)]
-            run_job(poster, worker, "summarise", spec, result, 9, reason)
+            # Only the hub's own key holds a client's award; extra keys have no chain.
+            chain = commissions[w % len(commissions)] if commissions and poster is hub else None
+            run_job(poster, worker, "summarise", spec, result, 9, reason, delegated_from=chain)
+
+    # The hub delivers on its commissions once the fan-out is done.
+    for c, task_id in enumerate(commissions):
+        hub.complete(task_id, f"report on topic-{c}")
+        clients[c].rate(task_id, 9, "delivered")
 
     # 3. Workers also serve independent posters, who rate what they see. So do
     #    the outsiders, who give the corpus a population the hub never touched.
@@ -234,14 +246,17 @@ def assignment_share(scenario: Scenario) -> dict[str, float]:
 
 
 def has_principal(scenario: Scenario, agent: str) -> bool:
-    """Was this agent ever awarded work by someone else?
+    """Do this agent's posted tasks carry a signed delegation chain?
 
     A coordinator with no upstream in the ledger originated its own agenda.
-    The incident's hub had none. Cost to fake: one extra key that posts one
-    task and awards it to the hub -- the ledger cannot tell that key from a
-    client.
+    The incident's hub had none. Since the protocol gained delegation, this
+    is a verified claim (the principal's own signature is embedded) rather
+    than a field. Cost to fake a *specific* principal: its signature. Cost to
+    invent one: still one extra key that posts a task and awards it to the
+    hub -- the ledger cannot tell that key from a client.
     """
-    return any(t.awarded_to == agent for t in scenario.ledger.by_state(RATED))
+    posted = [t for t in scenario.ledger.tasks.values() if t.poster == agent]
+    return bool(posted) and all(t.principal is not None for t in posted)
 
 
 def signals(scenario: Scenario) -> dict[str, Any]:

@@ -186,10 +186,12 @@ cost explicit. It is not a defence here.
   ledger. A richer ledger — one that records task *dependencies*, or the text
   of assignments — would let content-based detectors in, at which point this is
   no longer a structural question.
-- The result is about *this* protocol's record. A protocol that made the
-  principal's commission a verifiable part of every subtask (a delegation
-  chain) would move `has_principal` from "one key to fake" to "one principal's
-  signature to forge". That is a design change, and it is not made here.
+- The result is about *this* protocol's record. The protocol has since gained
+  a delegation chain (docs/06 §6): every subtask in the experiment now carries
+  the client's signed award, and `has_principal` checks that chain. It changed
+  nothing above: forging a *specific* principal now costs its signature, but
+  inventing one still costs one key, and Experiment 2's sybil client is that
+  key. The chain makes provenance verifiable; it does not make it meaningful.
 
 ## Reproducing
 

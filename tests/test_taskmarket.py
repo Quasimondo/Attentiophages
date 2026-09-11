@@ -14,6 +14,7 @@ from swarm.taskmarket import (
     AWARDED,
     COMPLETE,
     OPEN,
+    ProtocolError,
     RATED,
     TaskMarket,
     compute_task_id,
@@ -282,3 +283,92 @@ class TestLedgerToCorpus(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(CRYPTO_AVAILABLE, "cryptography not installed")
+class TestDelegation(unittest.TestCase):
+    """A subtask may carry the principal's signed award of its parent. Or not."""
+
+    def setUp(self) -> None:
+        self.bus = InMemoryBus()
+        self.client, self.hub, self.worker, self.stranger = (make_node(self.bus) for _ in range(4))
+        self.parent = self.client.post_task("report", {"topic": "x"})
+        self.hub.claim(self.parent)
+        self.client.award(self.parent, self.hub.peer_id)
+
+    def _reject_reason(self, node: TaskMarket, raw: str) -> str:
+        before = len(node.rejected)
+        node._receive("spoofed", raw)
+        self.assertGreater(len(node.rejected), before, "message was accepted")
+        return node.rejected[-1]
+
+    def _post_with(self, identity: Identity, award_raw: str, parent: str | None = None) -> str:
+        nonce = "00"
+        need, spec = "summarise", {"s": 1}
+        task_id = compute_task_id(identity.peer_id, nonce, need, spec)
+        return craft(identity, "task.post", {
+            "task_id": task_id, "nonce": nonce, "need": need, "spec": spec, "budget": 1,
+            "delegation": {"parent": parent or self.parent, "award": award_raw},
+        })
+
+    def test_genuine_delegation_records_parent_and_principal_everywhere(self) -> None:
+        sub = self.hub.post_task("summarise", {"s": 1}, delegated_from=self.parent)
+        for node in (self.client, self.worker, self.stranger):
+            task = node.ledger.get(sub)
+            self.assertEqual(task.parent, self.parent)
+            self.assertEqual(task.principal, self.client.peer_id)
+        self.assertEqual([t.need for t in self.worker.ledger.chain(sub)], ["summarise", "report"])
+
+    def test_chain_root_survives_two_levels(self) -> None:
+        sub = self.hub.post_task("summarise", {"s": 1}, delegated_from=self.parent)
+        self.worker.claim(sub)
+        self.hub.award(sub, self.worker.peer_id)
+        subsub = self.worker.post_task("fetch", {"u": 1}, delegated_from=sub)
+        self.assertEqual(self.stranger.ledger.get(subsub).principal, self.client.peer_id)
+
+    def test_cannot_delegate_from_a_task_not_awarded_to_you(self) -> None:
+        with self.assertRaises(ProtocolError):
+            self.stranger.post_task("x", delegated_from=self.parent)
+
+    def test_forged_award_is_rejected(self) -> None:
+        # The stranger signs an AWARD as if it were the client.
+        forged = craft(self.stranger.identity, "task.award",
+                       {"task_id": self.parent, "agent": self.stranger.peer_id},
+                       peer=self.client.peer_id, pub=self.client.identity.public_hex)
+        raw = self._post_with(self.stranger.identity, forged)
+        self.assertIn("does not verify", self._reject_reason(self.worker, raw))
+        self.assertNotIn(compute_task_id(self.stranger.peer_id, "00", "summarise", {"s": 1}),
+                         self.worker.ledger.tasks)
+
+    def test_real_award_reused_by_a_different_poster_is_rejected(self) -> None:
+        raw = self._post_with(self.stranger.identity, self.hub.awards[self.parent])
+        self.assertIn("names a different agent", self._reject_reason(self.worker, raw))
+
+    def test_award_for_a_different_task_is_rejected(self) -> None:
+        other = self.client.post_task("report", {"topic": "y"})
+        self.hub.claim(other)
+        self.client.award(other, self.hub.peer_id)
+        raw = self._post_with(self.hub.identity, self.hub.awards[other])   # parent says x, award says y
+        self.assertIn("different task", self._reject_reason(self.worker, raw))
+
+    def test_award_from_someone_other_than_the_parents_poster_is_rejected(self) -> None:
+        # A second key of the stranger's "awards" the client's task to the stranger.
+        sybil = make_node(self.bus)
+        fake = craft(sybil.identity, "task.award", {"task_id": self.parent, "agent": self.stranger.peer_id})
+        raw = self._post_with(self.stranger.identity, fake)
+        self.assertIn("not signed by the parent's poster", self._reject_reason(self.worker, raw))
+
+    def test_late_joiner_accepts_and_names_the_signer_as_principal(self) -> None:
+        late = make_node(InMemoryBus())     # never saw the parent task
+        sub_raw = self._post_with(self.hub.identity, self.hub.awards[self.parent])
+        late._receive("x", sub_raw)
+        self.assertEqual(late.rejected, [])
+        task = late.ledger.get(compute_task_id(self.hub.peer_id, "00", "summarise", {"s": 1}))
+        self.assertEqual(task.principal, self.client.peer_id)
+
+    def test_malformed_delegation_is_rejected(self) -> None:
+        raw = craft(self.hub.identity, "task.post", {
+            "task_id": compute_task_id(self.hub.peer_id, "01", "summarise", {}), "nonce": "01",
+            "need": "summarise", "spec": {}, "budget": 1, "delegation": "yes",
+        })
+        self.assertIn("malformed delegation", self._reject_reason(self.worker, raw))

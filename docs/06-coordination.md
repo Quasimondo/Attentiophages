@@ -193,6 +193,19 @@ and `TaskLedger.to_corpus()` converts that record into the form
 `attentiophages.metrics` consumes. An agent's quality becomes the ratings it has
 earned; a poster's ratings become amplification edges.
 
+**Delegation (added 2026-09-11).** A task posted on behalf of another carries
+the principal's own signed AWARD of the parent task to the poster, embedded in
+the POST. Every node re-verifies that signature before accepting the post; a
+forged or mismatched delegation rejects the whole message. The ledger then
+records each task's parent and its root principal, and `TaskLedger.chain()`
+walks it. What this buys: "who is this work for" has an answer that is a
+signature, so a worker can decline anything not rooted at a principal it
+trusts, and a captor cannot claim a specific principal it does not have. What
+it does not buy: the captor can still invent a principal for the price of one
+key, and a trusted principal's own hub can still delegate a harmful
+instruction under a perfectly valid chain. `docs/10` measures both.
+
+
 ## 7. A negative result: ratings alone lose to a rating ring
 
 `python3.11 -m swarm.taskmarket` runs an honest market — three posters, three

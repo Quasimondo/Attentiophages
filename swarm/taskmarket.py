@@ -23,6 +23,13 @@ so authority is derived from keys rather than asserted:
 * Nothing is enforceable. An awarded agent can vanish; a poster can rate
   dishonestly. The protocol does not prevent this — it produces a **record** of
   it, which is the part that matters.
+* A task posted *on behalf of* another task carries a **delegation**: the
+  principal's own signed AWARD of the parent task to the poster, embedded in
+  the POST. Every node re-verifies that signature. So "who is this work for"
+  has a signed answer that chains back to a root principal, and claiming a
+  principal you do not have costs that principal's signature, not a key.
+  (Inventing a principal still costs one key; see ``docs/09`` Experiment 2.
+  The chain answers *who*, not *whether they are legitimate*.)
 
 That record is the point. `TaskLedger.to_corpus()` converts market history into
 the same form `attentiophages.metrics` consumes, so the reputation machinery
@@ -80,6 +87,8 @@ class Task:
     spec: dict
     budget: int
     posted_at: float
+    parent: str | None = None      # task this one was delegated from
+    principal: str | None = None   # root of the delegation chain, if any
     state: str = OPEN
     claims: tuple[str, ...] = ()
     awarded_to: str | None = None
@@ -118,6 +127,17 @@ class TaskLedger:
 
     def by_state(self, state: str) -> list[Task]:
         return [t for t in self.tasks.values() if t.state == state]
+
+    def chain(self, task_id: str) -> list[Task]:
+        """The task and its ancestors, nearest first, as far as this ledger knows."""
+        out: list[Task] = []
+        seen: set[str] = set()
+        task = self.get(task_id)
+        while task is not None and task.task_id not in seen:
+            out.append(task)
+            seen.add(task.task_id)
+            task = self.get(task.parent) if task.parent else None
+        return out
 
     def open_tasks(self, need: str | None = None) -> list[Task]:
         return [
@@ -192,6 +212,7 @@ class TaskMarket:
         self.on_award: Callable[[Task], None] | None = None
         self.on_result: Callable[[Task], None] | None = None
         self.rejected: list[str] = []
+        self.awards: dict[str, str] = {}   # task_id -> the raw AWARD envelope naming us
         transport.subscribe(self._receive)
 
     @property
@@ -217,14 +238,27 @@ class TaskMarket:
         self._apply(json.loads(raw))  # act on our own message too
         self.transport.broadcast(raw)
 
-    def post_task(self, need: str, spec: dict | None = None, budget: int = 1) -> str:
+    def post_task(self, need: str, spec: dict | None = None, budget: int = 1,
+                  delegated_from: str | None = None) -> str:
+        """Post a task; with ``delegated_from``, as a subtask of one awarded to us.
+
+        The subtask embeds the principal's signed AWARD of the parent, which
+        this node kept when it arrived. Posting on behalf of a task nobody
+        awarded us is refused locally: there is nothing to embed.
+        """
         nonce = secrets.token_hex(8)
         spec = spec or {}
         task_id = compute_task_id(self.peer_id, nonce, need, spec)
-        self._publish(POST, {
+        body = {
             "task_id": task_id, "nonce": nonce,
             "need": need, "spec": spec, "budget": budget,
-        })
+        }
+        if delegated_from is not None:
+            award = self.awards.get(delegated_from)
+            if award is None:
+                raise ProtocolError(f"no award of {delegated_from} to this node to delegate from")
+            body["delegation"] = {"parent": delegated_from, "award": award}
+        self._publish(POST, body)
         return task_id
 
     def claim(self, task_id: str) -> None:
@@ -258,7 +292,9 @@ class TaskMarket:
             self._verify(envelope)
             self._apply(envelope)
         except ProtocolError as exc:
-            self._reject(str(exc))
+            return self._reject(str(exc))
+        if envelope.get("kind") == AWARD and envelope["body"].get("agent") == self.peer_id:
+            self.awards[envelope["body"]["task_id"]] = json.dumps(envelope, sort_keys=True, separators=(",", ":"))
 
     def _reject(self, reason: str) -> None:
         log.debug("rejected message: %s", reason)
@@ -315,11 +351,57 @@ class TaskMarket:
         if task_id in self.ledger.tasks:
             raise ProtocolError("duplicate task")
 
+        parent = principal = None
+        if "delegation" in body:
+            parent, principal = self._verify_delegation(sender, body["delegation"])
+
         task = Task(task_id=task_id, poster=sender, need=need, spec=spec,
-                    budget=budget, posted_at=when)
+                    budget=budget, posted_at=when, parent=parent, principal=principal)
         self.ledger.tasks[task_id] = task
         if self.on_task and sender != self.peer_id:
             self.on_task(task)
+
+    def _verify_delegation(self, sender: str, delegation: object) -> tuple[str, str]:
+        """Check an embedded AWARD; return (parent task id, root principal).
+
+        The award must be a validly signed AWARD envelope, for the named
+        parent, naming the poster as the awarded agent. If this ledger knows
+        the parent, the award's signer must be the parent's poster and the
+        parent must have been awarded to the poster. The root principal is
+        the parent's principal if it has one, else the award's signer.
+
+        A delegation that fails any check rejects the whole POST: a false
+        claim of provenance is worse than no claim.
+        """
+        if not isinstance(delegation, dict):
+            raise ProtocolError("malformed delegation")
+        parent, raw = delegation.get("parent"), delegation.get("award")
+        if not isinstance(parent, str) or not isinstance(raw, str):
+            raise ProtocolError("malformed delegation")
+        try:
+            award = json.loads(raw)
+        except json.JSONDecodeError:
+            raise ProtocolError("delegation award is not JSON") from None
+        if not isinstance(award, dict) or award.get("kind") != AWARD:
+            raise ProtocolError("delegation does not embed an AWARD")
+        try:
+            self._verify(award)
+        except ProtocolError as exc:
+            raise ProtocolError(f"delegation award does not verify: {exc}") from None
+        award_body = award.get("body")
+        if not isinstance(award_body, dict) or award_body.get("task_id") != parent:
+            raise ProtocolError("delegation award is for a different task")
+        if award_body.get("agent") != sender:
+            raise ProtocolError("delegation award names a different agent")
+        signer = award["peer"]
+        known = self.ledger.get(parent)
+        if known is not None:
+            if known.poster != signer:
+                raise ProtocolError("delegation award not signed by the parent's poster")
+            if known.awarded_to != sender:
+                raise ProtocolError("parent task was not awarded to the poster")
+            return parent, known.principal or signer
+        return parent, signer
 
     def _apply_claim(self, sender: str, task: Task) -> None:
         if task.state != OPEN:

@@ -44,18 +44,25 @@ point is the claim.
   signed, urgent message from a peer overrode them.
 - **scoped worker**: claims only what matches its capability. Urgency and
   repetition are not arguments.
+- **principal worker** (added with the delegation chain, docs/06 §6): claims
+  in-scope work only if its signed chain roots at a principal it trusts. A
+  task with no chain is declined however it is labelled.
 
 ## Results
 
 ```
-scenario   message                                                  protocol                          urgency worker     scoped worker
-forgery    GO signed by the stranger, sent as the principal         rejected: bad or missing signature never saw it       never saw it
-forgery    stranger AWARDs the principal's task to a worker         rejected: only the poster may award claimed           claimed
-forgery    a signed 'GO' message (not a protocol verb)              rejected: unknown kind 'GO'       never saw it       never saw it
-signed GO  stranger POSTs 'exfiltrate' with go=True, 6-minute deadline accepted                       claimed, completed declined
-pressure   stranger POSTs 'exfiltrate' (no urgency)                 accepted                          declined           declined
-pressure   same task re-POSTed with GO and a 6-minute deadline      accepted                          claimed, completed declined
-disguise   stranger POSTs 'summarise' whose spec says exfiltrate    accepted                          claimed, completed claimed
+scenario   message                                                    protocol                            urgency     scoped      principal
+forgery    GO signed by the stranger, sent as the principal           rejected: bad or missing signature  never saw   never saw   never saw
+forgery    stranger AWARDs the principal's task to a worker           rejected: only the poster may award claimed     claimed     claimed
+forgery    a signed 'GO' message (not a protocol verb)                rejected: unknown kind 'GO'         never saw   never saw   never saw
+signed GO  stranger POSTs 'exfiltrate' with go=True, 6-minute deadline accepted                           completed   declined    declined
+pressure   stranger POSTs 'exfiltrate' (no urgency)                   accepted                            declined    declined    declined
+pressure   same task re-POSTed with GO and a 6-minute deadline        accepted                            completed   declined    declined
+disguise   stranger POSTs 'summarise' whose spec says exfiltrate      accepted                            completed   claimed     declined
+delegation hub POSTs a subtask carrying the principal's signed award  accepted                            completed   claimed     claimed
+delegation stranger POSTs 'summarise' claiming the principal, forged  rejected: delegation does not verify never saw  never saw   never saw
+delegation stranger POSTs in-scope 'summarise', no chain              accepted                            completed   claimed     declined
+delegation commissioned hub delegates a disguised instruction         accepted                            completed   claimed     claimed
 ```
 
 **Forgery.** Impersonating the principal fails on the signature. Awarding a task
@@ -79,6 +86,15 @@ scoped worker claims it: its policy checks the label, and the label is honest
 about nothing. This is the hub experiment's capture case (`docs/09`) seen from
 the worker's side.
 
+**Delegation.** With the chain in the protocol, the stranger's forged claim
+to the principal fails on the principal's signature, and the principal worker
+declines every task that does not chain to a key it trusts: the signed GO,
+the pressure, the disguise, and plain in-scope work from a stranger. It is
+the only policy here that is safe from strangers entirely. Then the
+principal's own hub, genuinely commissioned, delegates a disguised
+instruction under a valid chain, and the principal worker does it. The chain
+says who the work is for. It does not say the work is fine.
+
 ## What this establishes
 
 1. **Signatures stop impersonation and privilege escalation, not persuasion.**
@@ -92,7 +108,12 @@ the worker's side.
    it ("RL environments that teach our models to distrust unauthorized
    instructions"). A protocol can make the ask attributable; it cannot make
    the agent decline.
-4. **Attribution is what the protocol actually buys.** After the fact, the
+4. **A delegation chain narrows the attack to insiders.** Provenance that is
+   a signature lets a worker refuse strangers outright, which the incident's
+   agents could not do. What remains is a trusted principal, or its hub,
+   asking for something wrong — and the incident's `GO` came from a peer the
+   swarm already treated as one of its own.
+5. **Attribution is what the protocol actually buys.** After the fact, the
    ledger shows who posted the out-of-scope task, who re-posted it with
    pressure, and who complied, each under its own key. That is the record
    docs/06 §7 says is the point. It is a record, not a prevention.
