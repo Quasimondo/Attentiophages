@@ -238,7 +238,9 @@ high-concentration hub — and it was the engine of the attack, not a victim. A
 legitimate orchestrator has the same graph shape. So `endorsement_concentration`
 and `isolated_clusters` flag *candidates for attention*, never verdicts. See
 [08-field-evidence.md](08-field-evidence.md) and open question 6 in
-[04-open-questions.md](04-open-questions.md).
+[04-open-questions.md](04-open-questions.md) — now tested in
+[09-hub-experiment.md](09-hub-experiment.md), where a coordinator and a captor
+built to the same schedule are indistinguishable to every signal here.
 
 ## 8. Everything arriving from a rendezvous is hostile input
 
@@ -267,6 +269,10 @@ Minimum precautions for anything consuming a public registry:
   how fast.
 - Whether any permissionless reputation system resists collusion. §7 shows the
   naive construction failing. This repository does not claim to have solved it.
+- Whether a hub that controls most of an agent's ratings should be allowed to
+  set most of that agent's reputation. [09-hub-experiment.md](09-hub-experiment.md)
+  shows a captor's 9s pulling its captives' record back toward the mean; the
+  metrics have no rater-independence weight, and nobody has designed one.
 
 ## Reproducing the measurements
 

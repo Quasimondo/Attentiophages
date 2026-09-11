@@ -148,6 +148,9 @@ scored.
    sufficient. A high-concentration hub is a place to look, never a verdict.
 3. The altruism / defection / governance behaviors are logged here as phenomena
    the current metrics cannot represent — candidate future work, not claims.
+4. **The legitimate-hub claim is now runnable** (done): `tools/hub_experiment.py`
+   builds both hubs on the real protocol and shows nothing structural separates
+   them. See [09-hub-experiment.md](09-hub-experiment.md).
 
 None of this required us to be right in advance. Where we were right (rendezvous,
 identity), the evidence is striking. Where we were incomplete (hubs, altruism,

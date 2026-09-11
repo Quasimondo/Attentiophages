@@ -140,6 +140,14 @@ ground-truth notion of "authorized" that a permissionless system does not have?
 If the answer is no, that is itself a result worth stating: in an open system,
 you cannot structurally distinguish a leader from a captor.
 
+**Answered — no.** [09-hub-experiment.md](09-hub-experiment.md) builds an honest
+coordinator and a capture hub on the real protocol from one schedule, differing
+only in what the hub's assignments say, and runs every signal in the repository
+on both. Nothing separates them. The one candidate that does (whether anyone in
+the ledger commissioned the hub) costs one extra key to fake. What does separate
+them is outcome data from raters the hub does not control, which is not a
+property of the graph. Reproduce with `python3.11 tools/hub_experiment.py`.
+
 See [07-registry-audit.md](07-registry-audit.md) for the first out-of-sample
 test and [08-field-evidence.md](08-field-evidence.md) for the incident this
 question comes from.
