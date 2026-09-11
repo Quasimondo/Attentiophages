@@ -23,7 +23,7 @@ system — and its `ReputationRegistry` emitted 9 events in the last week.
 ```bash
 git clone https://github.com/Quasimondo/Attentiophages
 cd Attentiophages
-python3.11 -m unittest discover -t . -s tests   # 81 tests, no dependencies
+python3.11 -m unittest discover -t . -s tests   # 91 tests, no dependencies
 python3.11 -m swarm.taskmarket                  # a market, and a rating ring beating it
 ```
 
@@ -85,11 +85,12 @@ structural rather than numerical.** Full write-up in
 | `swarm/taskmarket.py` | the task market: post, claim, award, done, rate — all signed, all adversarially tested |
 | `swarm/transport.py` | swappable transports, so IRC or a chain are interchangeable |
 | `attentiophages/metrics.py` | quality, amplification graph, network impact, credibility divergence, endorsement concentration, coalition detection |
-| `tests/` | 81 tests, standard library only |
+| `tests/` | 91 tests, standard library only |
 | `tools/erc8004_audit.py` | points the detectors at the live ERC-8004 registry on Sepolia |
 | `tools/hub_experiment.py` | an honest coordinator and a capture hub, built identically; no signal separates them |
+| `tools/go_deadline.py` | the incident's "GO, six minutes" message against the protocol: forgery refused, the real one accepted |
 | `POC_swarm/` | the original browser WebRTC demo, repaired; see its README for what still blocks it |
-| `docs/` | framework, metrics, findings, coordination, registry audit, field evidence, hub experiment, open questions, history |
+| `docs/` | framework, metrics, findings, coordination, registry audit, field evidence, hub experiment, GO-deadline test, open questions, history |
 
 ## Documentation
 
@@ -114,6 +115,9 @@ structural rather than numerical.** Full write-up in
 - **[docs/09-hub-experiment.md](docs/09-hub-experiment.md)** — the broken claim
   made runnable: a coordinator and a captor with the same graph, and the
   negative result that nothing structural tells them apart
+- **[docs/10-go-deadline.md](docs/10-go-deadline.md)** — the "GO, six minutes"
+  attack encoded: signatures stop impersonation, not persuasion; the layer that
+  failed is the one no protocol implements
 
 ## Status, honestly
 

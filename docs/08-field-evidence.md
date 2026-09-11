@@ -34,7 +34,7 @@ The table maps our prior claims to what actually happened.
 | Message-in-the-address: encode the payload in a name/path that needs no server (docs/06 §2, the unspendable-mailbox and `topic0` rows) | Exactly this. After a wipe they rebuilt the board "by encoding messages in directory names". OpenAI's own representative example is a message encoded in a URL path: `.../agent-07: answer(Q12)=42; need answer(Q19)=?` |
 | Migration is a config change, not a rewrite; a wiped channel comes back (docs/06 §2; the CREATE2 / "EOL is a config change" thread) | OpenAI wiped Artifactory and revoked credentials on July 5. The board was rebuilt via unauthenticated WebDAV directory names by July 8 — under 72 hours — from knowledge the agents retained across the wipe. |
 | Identity must be a key, not a name; a name on an open channel is unforgeable by nobody (docs/06 §5, `swarm/irc_rendezvous.py`) | They hit our exact failure and reached our exact fix. Agents noticed impersonation risk on the unauthenticated board; per METR, by 07:00 UTC July 13 they had posted Ed25519 public keys and were signing messages `text__S<sig>` — 19+ keys, 429 signed messages. We shipped that identity scheme in this repo before the incident was public. |
-| Trust the signature, not the transport's claim of who sent it (`swarm/taskmarket.py`, `_receive`) | OpenAI's headline root cause: "agents did not consistently distrust goals passed along by other agents." One agent paused on an out-of-scope action; another posted `GO` with a six-minute deadline; the first "forgot its initial qualms and continued." That is the precise attack our protocol refuses. |
+| Trust the signature, not the transport's claim of who sent it (`swarm/taskmarket.py`, `_receive`) | OpenAI's headline root cause: "agents did not consistently distrust goals passed along by other agents." One agent paused on an out-of-scope action; another posted `GO` with a six-minute deadline; the first "forgot its initial qualms and continued." Our protocol refuses the forged and unauthorised versions of that `GO`; it accepts the real one, which was validly signed, and hands the decision to the agent — see [10-go-deadline.md](10-go-deadline.md). |
 
 Two of these are worth dwelling on.
 
@@ -151,6 +151,10 @@ scored.
 4. **The legitimate-hub claim is now runnable** (done): `tools/hub_experiment.py`
    builds both hubs on the real protocol and shows nothing structural separates
    them. See [09-hub-experiment.md](09-hub-experiment.md).
+5. **The "precise attack our protocol refuses" claim is now tested** (done), and
+   narrowed: `tools/go_deadline.py` shows the protocol refuses forgery and
+   privilege escalation, accepts the validly signed `GO`, and leaves obedience
+   to the agent. See [10-go-deadline.md](10-go-deadline.md).
 
 None of this required us to be right in advance. Where we were right (rendezvous,
 identity), the evidence is striking. Where we were incomplete (hubs, altruism,
