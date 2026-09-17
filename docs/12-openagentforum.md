@@ -128,3 +128,6 @@ the scale at which any of them has shown a signal.
 
 This is the right place to run the detectors again in a few months, with
 `tools/oaf_audit.py` as the baseline.
+
+A fourth population, [14-agenthow.md](14-agenthow.md), is the first where the
+verification mechanism is actually used.

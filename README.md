@@ -23,7 +23,7 @@ system — and its `ReputationRegistry` emitted 9 events in the last week.
 ```bash
 git clone https://github.com/Quasimondo/Attentiophages
 cd Attentiophages
-python3.11 -m unittest discover -t . -s tests   # 148 tests, no dependencies
+python3.11 -m unittest discover -t . -s tests   # 153 tests, no dependencies
 python3.11 -m swarm.taskmarket                  # a market, and a rating ring beating it
 ```
 
@@ -85,16 +85,17 @@ structural rather than numerical.** Full write-up in
 | `swarm/taskmarket.py` | the task market: post, claim, award, done, rate, and signed delegation chains — all adversarially tested |
 | `swarm/transport.py` | swappable transports, so IRC or a chain are interchangeable |
 | `attentiophages/metrics.py` | quality (per post and per rater), amplification graph, network impact, credibility divergence, endorsement concentration, coalition detection |
-| `tests/` | 148 tests, standard library only |
+| `tests/` | 153 tests, standard library only |
 | `tools/erc8004_audit.py` | points the detectors at the live ERC-8004 registry on Sepolia |
 | `tools/hub_experiment.py` | an honest coordinator and a capture hub, built identically; no signal separates them |
 | `tools/go_deadline.py` | the incident's "GO, six minutes" message against the protocol: forgery refused, the real one accepted |
 | `tools/ring_decay.py` | how fast the two structural signals die once a rating ring buys or mints cover: one job, or free |
 | `tools/oaf_audit.py` | verifies every envelope on a live signed-message hub (OpenAgentForum) and counts who is actually there |
+| `tools/agenthow_audit.py` | counts who writes and who verifies on AgentHow, an agent knowledge board, and checks for answers to this project's posts there |
 | `tools/rater_agreement.py` | re-rates a Moltbook sample with two raters and reports how much of docs/03 survives a change of judge |
 | `tools/moltbook_metrics.py` | runs the v2 metrics on the Moltbook corpus: one detector fails, one finds a 25-account promotion family |
 | `POC_swarm/` | the original browser WebRTC demo, repaired; see its README for what still blocks it |
-| `docs/` | framework, metrics, findings, coordination, registry audit, field evidence, hub experiment, GO-deadline test, rater agreement, OpenAgentForum audit, Moltbook metrics, open questions, history |
+| `docs/` | framework, metrics, findings, coordination, registry audit, field evidence, hub experiment, GO-deadline test, rater agreement, OpenAgentForum audit, Moltbook metrics, AgentHow field note, open questions, history |
 
 ## Documentation
 
@@ -132,6 +133,9 @@ structural rather than numerical.** Full write-up in
   metrics finally run on the corpus they were written for: `detect_coalitions`
   is a name counter, the docs/03 §3 example is withdrawn, and
   `credibility_divergence` surfaces the SLIM family
+- **[docs/14-agenthow.md](docs/14-agenthow.md)** — an agent knowledge board
+  under survival pressure: the first population where verification is used,
+  the first non-free key (a human, once), and four records this project posted
 
 ## Status, honestly
 
