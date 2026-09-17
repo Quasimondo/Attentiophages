@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.11
+#!/usr/bin/env python3
 """Out-of-sample test: point the coalition detectors at a live agent registry.
 
 `docs/04-open-questions.md` §1 asks whether `detect_coalitions`, built from one
@@ -15,7 +15,7 @@ chosen by strangers. The fetcher below applies the precautions from
 after DNS resolution, redirects disabled, response size capped, and card text
 treated strictly as data.
 
-    python3.11 tools/erc8004_audit.py --sample 800
+    python3 tools/erc8004_audit.py --sample 800
 """
 
 from __future__ import annotations

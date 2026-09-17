@@ -20,7 +20,7 @@ against the honest posters' value, whether the ring is still an isolated
 cluster, where the ring's worker ranks on ratings (plain, and one vote per
 rater), and what it paid.
 
-    python3.11 tools/ring_decay.py
+    python3 tools/ring_decay.py
 """
 
 from __future__ import annotations

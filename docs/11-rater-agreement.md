@@ -8,8 +8,8 @@ supported.**
 This answers question 4 of `docs/04-open-questions.md`. Reproduce with:
 
 ```bash
-python3.11 tools/rater_agreement.py --db /path/to/moltbook.db --rate   # ~1 h on one GPU
-python3.11 tools/rater_agreement.py --report
+python3 tools/rater_agreement.py --db /path/to/moltbook.db --rate   # ~1 h on one GPU
+python3 tools/rater_agreement.py --report
 ```
 
 ## Method

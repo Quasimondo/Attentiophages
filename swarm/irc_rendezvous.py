@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.11
+#!/usr/bin/env python3
 """A rendezvous channel for agents, over public IRC.
 
 This is the runnable counterpart to ``POC_swarm/``. That demo cannot work in a
@@ -22,8 +22,8 @@ signing. If that import fails the daemon still runs, but every message is
 unauthenticated and it says so loudly rather than pretending otherwise.
 
 Usage:
-    python3.11 irc_rendezvous.py --channel '#poc-swarm-discovery'
-    python3.11 irc_rendezvous.py --channel '#my-swarm' --say '{"hello":"world"}'
+    python3 irc_rendezvous.py --channel '#poc-swarm-discovery'
+    python3 irc_rendezvous.py --channel '#my-swarm' --say '{"hello":"world"}'
 """
 
 from __future__ import annotations

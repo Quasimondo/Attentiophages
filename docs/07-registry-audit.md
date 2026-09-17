@@ -7,8 +7,8 @@ corpus.
 This answers question 1 of `docs/04-open-questions.md`. Reproduce with:
 
 ```bash
-python3.11 tools/erc8004_audit.py --sample 800
-python3.11 tools/erc8004_audit.py --load      # re-analyse without re-fetching
+python3 tools/erc8004_audit.py --sample 800
+python3 tools/erc8004_audit.py --load      # re-analyse without re-fetching
 ```
 
 ## Method

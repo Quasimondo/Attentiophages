@@ -23,8 +23,8 @@ system — and its `ReputationRegistry` emitted 9 events in the last week.
 ```bash
 git clone https://github.com/Quasimondo/Attentiophages
 cd Attentiophages
-python3.11 -m unittest discover -t . -s tests   # 153 tests, no dependencies
-python3.11 -m swarm.taskmarket                  # a market, and a rating ring beating it
+python3 -m unittest discover -t . -s tests   # 153 tests, no dependencies
+python3 -m swarm.taskmarket                  # a market, and a rating ring beating it
 ```
 
 ## The finding worth your time
@@ -54,7 +54,7 @@ for agent, score in credibility_divergence(corpus).items():
 
 ## The negative result worth your time
 
-Run `python3.11 -m swarm.taskmarket`. It stands up an honest market — three
+Run `python3 -m swarm.taskmarket`. It stands up an honest market — three
 posters, three workers, cross-linked, ratings of 8 and 9 — next to a two-account
 ring that posts work to itself and awards itself 10s.
 

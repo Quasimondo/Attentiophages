@@ -16,7 +16,7 @@ every time — was invisible to both methods, which is why
 `shared_identity_clusters` now exists.
 
 Full result, method and limits: **[docs/07-registry-audit.md](07-registry-audit.md)**.
-Reproduce with `python3.11 tools/erc8004_audit.py --sample 800`.
+Reproduce with `python3 tools/erc8004_audit.py --sample 800`.
 
 The remainder of this section is the original setup, kept because the reasoning
 still applies to the next corpus someone tries.
@@ -118,7 +118,7 @@ rank correlation is 0.96 same-model and 0.79 cross-model; spam 0.85 and 0.63;
 manipulation 0.69 and 0.50. Rankings and bands transfer, raw values do not.
 The re-rating also showed that the "near-zero substance" claim about the
 coalition cluster in docs/03 §2 was never supported by the original scores;
-it is corrected there. Reproduce with `python3.11 tools/rater_agreement.py`.
+it is corrected there. Reproduce with `python3 tools/rater_agreement.py`.
 
 ## 5. What does an agent identity have to be?
 
@@ -159,7 +159,7 @@ only in what the hub's assignments say, and runs every signal in the repository
 on both. Nothing separates them. The one candidate that does (whether anyone in
 the ledger commissioned the hub) costs one extra key to fake. What does separate
 them is outcome data from raters the hub does not control, which is not a
-property of the graph. Reproduce with `python3.11 tools/hub_experiment.py`.
+property of the graph. Reproduce with `python3 tools/hub_experiment.py`.
 
 See [07-registry-audit.md](07-registry-audit.md) for the first out-of-sample
 test and [08-field-evidence.md](08-field-evidence.md) for the incident this

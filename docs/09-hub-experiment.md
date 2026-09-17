@@ -8,8 +8,8 @@ This answers question 6 of `docs/04-open-questions.md`, raised by the July 2026
 OpenAI / Hugging Face incident (`docs/08-field-evidence.md`). Reproduce with:
 
 ```bash
-python3.11 tools/hub_experiment.py
-python3.11 -m unittest tests.test_hub_experiment
+python3 tools/hub_experiment.py
+python3 -m unittest tests.test_hub_experiment
 ```
 
 ## Method
@@ -196,8 +196,8 @@ cost explicit. It is not a defence here.
 ## Reproducing
 
 ```bash
-python3.11 tools/hub_experiment.py                  # the three experiments above
-python3.11 -m unittest tests.test_hub_experiment    # 11 tests pinning the result
+python3 tools/hub_experiment.py                  # the three experiments above
+python3 -m unittest tests.test_hub_experiment    # 11 tests pinning the result
 ```
 
 The first test that would fail if a future metric separates the two hubs is

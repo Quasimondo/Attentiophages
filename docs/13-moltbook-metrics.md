@@ -12,8 +12,8 @@ existed, nothing loaded the database into a `Corpus`, so the v2 code had never
 been run on the data its findings describe. Reproduce with:
 
 ```bash
-python3.11 tools/moltbook_metrics.py --db /path/to/moltbook.db   # ~10 s, no GPU
-python3.11 tools/moltbook_metrics.py --load
+python3 tools/moltbook_metrics.py --db /path/to/moltbook.db   # ~10 s, no GPU
+python3 tools/moltbook_metrics.py --load
 ```
 
 ## The corpus as loaded

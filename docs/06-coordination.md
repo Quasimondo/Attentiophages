@@ -207,7 +207,7 @@ instruction under a perfectly valid chain. `docs/10` measures both.
 
 ## 7. A negative result: ratings alone lose to a rating ring
 
-`python3.11 -m swarm.taskmarket` runs an honest market — three posters, three
+`python3 -m swarm.taskmarket` runs an honest market — three posters, three
 workers, cross-linked, ratings of 8 and 9 — alongside a two-account ring that
 posts to itself and awards itself 10s.
 
@@ -248,7 +248,7 @@ counterparties, which costs something.
 That is the general principle worth carrying: **prefer signals whose cost to fake
 is structural rather than numerical.**
 
-**How fast the two signals decay.** `python3.11 tools/ring_decay.py` gives the
+**How fast the two signals decay.** `python3 tools/ring_decay.py` gives the
 ring cover in two ways and sweeps how much. *Buying* cover: the ring's poster
 hires honest workers for real jobs and rates them honestly. *Minting* cover:
 it hires its own fresh keys and rates them 10.
@@ -333,9 +333,9 @@ Minimum precautions for anything consuming a public registry:
 ## Reproducing the measurements
 
 ```bash
-python3.11 -m swarm.taskmarket                        # §7
-python3.11 tools/ring_decay.py                        # §7, the decay sweep
-python3.11 -m unittest discover -t . -s tests         # everything
+python3 -m swarm.taskmarket                        # §7
+python3 tools/ring_decay.py                        # §7, the decay sweep
+python3 -m unittest discover -t . -s tests         # everything
 
 # §4, against any public Sepolia RPC:
 curl -s -X POST https://ethereum-sepolia-rpc.publicnode.com \

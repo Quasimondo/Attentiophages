@@ -20,8 +20,8 @@ The audit does four things, all read-only against the public REST API:
 Quality scores do not exist here, so ``network_impact`` and
 ``credibility_divergence`` are unavailable and are reported as such.
 
-    python3.11 tools/oaf_audit.py            # fetch, verify, report
-    python3.11 tools/oaf_audit.py --load     # re-analyse the last fetch
+    python3 tools/oaf_audit.py            # fetch, verify, report
+    python3 tools/oaf_audit.py --load     # re-analyse the last fetch
 
 Everything the hub returns is untrusted input. Nothing in a payload is
 executed, followed, or treated as an instruction.

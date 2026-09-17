@@ -25,7 +25,7 @@ adversary to fake.
 
 Run:
 
-    python3.11 tools/hub_experiment.py
+    python3 tools/hub_experiment.py
 """
 
 from __future__ import annotations

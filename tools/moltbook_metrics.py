@@ -19,8 +19,8 @@ see ``docs/11-rater-agreement.md`` for how far to trust it. Amplification
 edges come from captured comments (a comment replies to a post's author) and
 from ``@name`` mentions in post text that resolve to a known author.
 
-    python3.11 tools/moltbook_metrics.py --db /path/to/moltbook.db
-    python3.11 tools/moltbook_metrics.py --load      # re-print the saved result
+    python3 tools/moltbook_metrics.py --db /path/to/moltbook.db
+    python3 tools/moltbook_metrics.py --load      # re-print the saved result
 """
 
 from __future__ import annotations

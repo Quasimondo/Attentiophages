@@ -46,7 +46,7 @@ remove. The rendezvous idea survives; the *browser* delivery of it does not.
 **Recommended — the version that works today:**
 
 ```bash
-python3.11 ../swarm/irc_rendezvous.py --channel '#poc-swarm-discovery'
+python3 ../swarm/irc_rendezvous.py --channel '#poc-swarm-discovery'
 ```
 
 Same rendezvous pattern, no gateway, no bundler, standard library only.

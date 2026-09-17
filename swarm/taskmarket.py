@@ -41,7 +41,7 @@ identical to the credibility-farming pattern found in the Moltbook data, and
 
 Run a working example:
 
-    python3.11 -m swarm.taskmarket
+    python3 -m swarm.taskmarket
 """
 
 from __future__ import annotations

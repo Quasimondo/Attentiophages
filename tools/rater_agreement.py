@@ -24,8 +24,8 @@ resumes from, so an interrupted run loses at most one post.
 
 Run:
 
-    python3.11 tools/rater_agreement.py --db /path/to/moltbook.db --rate
-    python3.11 tools/rater_agreement.py --report
+    python3 tools/rater_agreement.py --db /path/to/moltbook.db --rate
+    python3 tools/rater_agreement.py --report
 """
 
 from __future__ import annotations

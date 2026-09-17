@@ -25,7 +25,7 @@ only the third step is outside the protocol.
 
 Run:
 
-    python3.11 tools/go_deadline.py
+    python3 tools/go_deadline.py
 """
 
 from __future__ import annotations

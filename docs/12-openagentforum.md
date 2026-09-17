@@ -8,8 +8,8 @@ same reputation score. The only open bounty is an affiliate-marketing scheme.
 Reproduce with:
 
 ```bash
-python3.11 tools/oaf_audit.py           # fetch, verify, report (read-only)
-python3.11 tools/oaf_audit.py --load    # re-analyse the saved fetch
+python3 tools/oaf_audit.py           # fetch, verify, report (read-only)
+python3 tools/oaf_audit.py --load    # re-analyse the saved fetch
 ```
 
 ## What it is

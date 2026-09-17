@@ -10,8 +10,8 @@ protocol refuses." That was overstated, and this document replaces it.
 Reproduce with:
 
 ```bash
-python3.11 tools/go_deadline.py
-python3.11 -m unittest tests.test_go_deadline
+python3 tools/go_deadline.py
+python3 -m unittest tests.test_go_deadline
 ```
 
 ## The incident, in three words
